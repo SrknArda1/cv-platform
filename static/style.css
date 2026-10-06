@@ -1,0 +1,33 @@
+/* Tailwind CDN'in karşılamadığı birkaç küçük detay */
+
+input, select, textarea {
+  font-family: inherit;
+}
+
+input[type="file"]::file-selector-button {
+  border: none;
+  background: #eef2ff;
+  color: #4338ca;
+  padding: 8px 14px;
+  border-radius: 8px;
+  margin-right: 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+input[type="file"]::file-selector-button:hover {
+  background: #e0e7ff;
+}
+
+/* Form elemanlarına Tailwind Forms benzeri temel görünüm (plugin yüklü değil) */
+input:not([type="checkbox"]):not([type="file"]),
+select,
+textarea {
+  border-width: 1px;
+  padding: 0.55rem 0.75rem;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.25);
+  border-color: #6366f1;
+}

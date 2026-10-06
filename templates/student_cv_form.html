@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% macro edu_row(edu) %}
+<div class="dynamic-row grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-slate-50 border border-slate-200 rounded-lg p-4 mb-3" data-dynamic-row>
+  <div class="md:col-span-2">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Eğitim Türü</label>
+    <select name="edu_degree_type[]" class="w-full rounded-md border-slate-300 text-sm">
+      <option value="Ön Lisans" {% if edu.degree_type == 'Ön Lisans' %}selected{% endif %}>Ön Lisans</option>
+      <option value="Lisans" {% if edu.degree_type == 'Lisans' or not edu.degree_type %}selected{% endif %}>Lisans</option>
+      <option value="Yüksek Lisans" {% if edu.degree_type == 'Yüksek Lisans' %}selected{% endif %}>Yüksek Lisans</option>
+      <option value="Doktora" {% if edu.degree_type == 'Doktora' %}selected{% endif %}>Doktora</option>
+    </select>
+  </div>
+  <div class="md:col-span-3">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Okul</label>
+    <input type="text" name="edu_school[]" value="{{ edu.school or '' }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Örn: ABC Üniversitesi">
+  </div>
+  <div class="md:col-span-3">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Bölüm</label>
+    <input type="text" name="edu_department[]" value="{{ edu.department or '' }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Örn: Bilgisayar Müh.">
+  </div>
+  <div class="md:col-span-1">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Ortalama</label>
+    <input type="text" name="edu_gpa[]" value="{{ edu.gpa or '' }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="3.45">
+  </div>
+  <div class="md:col-span-1">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Başlangıç</label>
+    <input type="text" name="edu_start_year[]" value="{{ edu.start_year or '' }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="2020">
+  </div>
+  <div class="md:col-span-1">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Bitiş</label>
+    <input type="text" name="edu_end_year[]" value="{{ edu.end_year or '' }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="2024">
+  </div>
+  <div class="md:col-span-1 flex md:justify-end">
+    <button type="button" data-row-remove class="text-rose-500 hover:text-rose-700 p-2" title="Satırı sil">
+      <i class="fa-solid fa-trash"></i>
+    </button>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro exp_row(exp) %}
+<div class="dynamic-row bg-slate-50 border border-slate-200 rounded-lg p-4 mb-3" data-dynamic-row>
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mb-3">
+    <div class="md:col-span-3">
+      <label class="block text-xs font-semibold text-slate-500 mb-1">Şirket</label>
+      <input type="text" name="exp_company[]" value="{{ exp.company }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Şirket adı">
+    </div>
+    <div class="md:col-span-3">
+      <label class="block text-xs font-semibold text-slate-500 mb-1">Pozisyon</label>
+      <input type="text" name="exp_position[]" value="{{ exp.position }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Örn: Stajyer Yazılım Geliştirici">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs font-semibold text-slate-500 mb-1">Başlangıç</label>
+      <input type="text" name="exp_start_date[]" value="{{ exp.start_date }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Haz 2023">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs font-semibold text-slate-500 mb-1">Bitiş</label>
+      <input type="text" name="exp_end_date[]" value="{{ exp.end_date }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Ağu 2023 / Halen">
+    </div>
+    <div class="md:col-span-2 flex md:justify-end">
+      <button type="button" data-row-remove class="text-rose-500 hover:text-rose-700 p-2" title="Satırı sil">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    </div>
+  </div>
+  <label class="block text-xs font-semibold text-slate-500 mb-1">Açıklama (opsiyonel)</label>
+  <textarea name="exp_description[]" rows="2" class="w-full rounded-md border-slate-300 text-sm" placeholder="Görevler, sorumluluklar...">{{ exp.description }}</textarea>
+</div>
+{% endmacro %}
+
+{% macro cert_row(cert) %}
+<div class="dynamic-row grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-slate-50 border border-slate-200 rounded-lg p-4 mb-3" data-dynamic-row>
+  <div class="md:col-span-4">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Sertifika Adı</label>
+    <input type="text" name="cert_name[]" value="{{ cert.name }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Örn: AWS Cloud Practitioner">
+  </div>
+  <div class="md:col-span-4">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Veren Kurum</label>
+    <input type="text" name="cert_institution[]" value="{{ cert.institution }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Örn: Amazon">
+  </div>
+  <div class="md:col-span-3">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Tarih</label>
+    <input type="text" name="cert_date[]" value="{{ cert.date }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="2024">
+  </div>
+  <div class="md:col-span-1 flex md:justify-end">
+    <button type="button" data-row-remove class="text-rose-500 hover:text-rose-700 p-2" title="Satırı sil">
+      <i class="fa-solid fa-trash"></i>
+    </button>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro proj_row(proj) %}
+<div class="dynamic-row bg-slate-50 border border-slate-200 rounded-lg p-4 mb-3" data-dynamic-row>
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mb-3">
+    <div class="md:col-span-5">
+      <label class="block text-xs font-semibold text-slate-500 mb-1">Proje Adı</label>
+      <input type="text" name="proj_title[]" value="{{ proj.title }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Proje başlığı">
+    </div>
+    <div class="md:col-span-3">
+      <label class="block text-xs font-semibold text-slate-500 mb-1">Teknolojiler</label>
+      <input type="text" name="proj_tech_stack[]" value="{{ proj.tech_stack }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="Python, NS-3...">
+    </div>
+    <div class="md:col-span-3">
+      <label class="block text-xs font-semibold text-slate-500 mb-1">Bağlantı (opsiyonel)</label>
+      <input type="url" name="proj_link[]" value="{{ proj.link }}" class="w-full rounded-md border-slate-300 text-sm" placeholder="https://github.com/...">
+    </div>
+    <div class="md:col-span-1 flex md:justify-end">
+      <button type="button" data-row-remove class="text-rose-500 hover:text-rose-700 p-2" title="Satırı sil">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    </div>
+  </div>
+  <label class="block text-xs font-semibold text-slate-500 mb-1">Açıklama</label>
+  <textarea name="proj_description[]" rows="2" class="w-full rounded-md border-slate-300 text-sm" placeholder="Projenin kısa açıklaması...">{{ proj.description }}</textarea>
+</div>
+{% endmacro %}
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-slate-900">Özgeçmiş Bilgilerim</h1>
+  <a href="{{ url_for('student_dashboard') }}" class="text-sm text-slate-500 hover:text-indigo-600">&larr; Panele dön</a>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+
+  <!-- Sekmeler -->
+  <div class="flex flex-wrap gap-2 mb-6">
+    <button type="button" data-tab-target="genel" class="tab-btn active bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+      <i class="fa-solid fa-user"></i> Genel Bilgiler
+    </button>
+    <button type="button" data-tab-target="egitim" class="tab-btn bg-white text-slate-600 text-sm font-semibold px-4 py-2 rounded-lg border border-slate-200">
+      <i class="fa-solid fa-book"></i> Eğitim
+    </button>
+    <button type="button" data-tab-target="deneyim" class="tab-btn bg-white text-slate-600 text-sm font-semibold px-4 py-2 rounded-lg border border-slate-200">
+      <i class="fa-solid fa-briefcase"></i> Deneyim
+    </button>
+    <button type="button" data-tab-target="sertifika" class="tab-btn bg-white text-slate-600 text-sm font-semibold px-4 py-2 rounded-lg border border-slate-200">
+      <i class="fa-solid fa-certificate"></i> Sertifikalar
+    </button>
+    <button type="button" data-tab-target="proje" class="tab-btn bg-white text-slate-600 text-sm font-semibold px-4 py-2 rounded-lg border border-slate-200">
+      <i class="fa-solid fa-diagram-project"></i> Projeler
+    </button>
+  </div>
+
+ <!-- Genel Bilgiler -->
+  <div data-tab-panel="genel" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Ad Soyad</label>
+        <input type="text" name="full_name" value="{{ student.full_name or '' }}" required class="w-full rounded-lg border-slate-300">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Bölüm</label>
+        <select name="department" required class="w-full rounded-lg border-slate-300">
+          <option value="">Seçiniz</option>
+          {% for dep in departments %}
+            <option value="{{ dep }}" {% if student.department == dep %}selected{% endif %}>{{ dep }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Telefon</label>
+        <input type="text" name="phone" value="{{ student.phone or '' }}" class="w-full rounded-lg border-slate-300">
+      </div>
+      
+      <!-- YENİ: Profil Fotoğrafı Alanı -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Profil Fotoğrafı (JPG, PNG, WEBP)</label>
+        <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="w-full text-sm">
+        {% if student.photo_filename %}
+          <p class="text-xs text-emerald-600 mt-1"><i class="fa-solid fa-circle-check"></i> Fotoğraf yüklü — yeni seçerseniz üzerine yazılır.</p>
+        {% endif %}
+      </div>
+
+      <!-- Transkript Alanı (Tam genişlik veya grid içinde) -->
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Transkript (PDF, JPG, PNG)</label>
+        <input type="file" name="transcript" accept=".pdf,.jpg,.jpeg,.png" class="w-full text-sm">
+        {% if student.transcript_filename %}
+          <p class="text-xs text-emerald-600 mt-1"><i class="fa-solid fa-circle-check"></i> Dosya yüklü — yeni seçerseniz üzerine yazılır.</p>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1">Kısa Profesyonel Özet</label>
+      <textarea name="summary" rows="3" class="w-full rounded-lg border-slate-300" placeholder="Kendinizi ve kariyer hedeflerinizi kısaca tanıtın...">{{ student.summary or '' }}</textarea>
+    </div>
+    
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1">Yetenekler & Yetkinlikler</label>
+      <input type="text" name="skills" value="{{ student.skills or '' }}" class="w-full rounded-lg border-slate-300" placeholder="Örn: Python, SQL, Git, Linux, Ağ Yönetimi (Virgülle ayırarak yazın)">
+      <p class="text-xs text-slate-400 mt-1">Yeteneklerinizi aralarına virgül koyarak yazabilirsiniz.</p>
+    </div>
+  </div>
+
+  <!-- Eğitim -->
+  <div data-tab-panel="egitim" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div id="edu-rows">
+      {% for edu in student.educations %}{{ edu_row(edu) }}{% endfor %}
+    </div>
+    <button type="button" data-row-add="edu-rows" data-row-template="edu-row-template"
+      class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 mt-1">
+      <i class="fa-solid fa-plus"></i> Satır Ekle
+    </button>
+    <template id="edu-row-template">{{ edu_row(namespace(degree_type='Lisans', school='', department='', gpa='', start_year='', end_year='')) }}</template>
+  </div>
+
+  <!-- Deneyim -->
+  <div data-tab-panel="deneyim" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div id="exp-rows">
+      {% for exp in student.experiences %}{{ exp_row(exp) }}{% endfor %}
+    </div>
+    <button type="button" data-row-add="exp-rows" data-row-template="exp-row-template"
+      class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 mt-1">
+      <i class="fa-solid fa-plus"></i> Satır Ekle
+    </button>
+    <template id="exp-row-template">{{ exp_row(namespace(company='', position='', start_date='', end_date='', description='')) }}</template>
+  </div>
+
+  <!-- Sertifikalar -->
+  <div data-tab-panel="sertifika" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div id="cert-rows">
+      {% for cert in student.certificates %}{{ cert_row(cert) }}{% endfor %}
+    </div>
+    <button type="button" data-row-add="cert-rows" data-row-template="cert-row-template"
+      class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 mt-1">
+      <i class="fa-solid fa-plus"></i> Satır Ekle
+    </button>
+    <template id="cert-row-template">{{ cert_row(namespace(name='', institution='', date='')) }}</template>
+  </div>
+
+  <!-- Projeler -->
+  <div data-tab-panel="proje" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div id="proj-rows">
+      {% for proj in student.projects %}{{ proj_row(proj) }}{% endfor %}
+    </div>
+    <button type="button" data-row-add="proj-rows" data-row-template="proj-row-template"
+      class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 mt-1">
+      <i class="fa-solid fa-plus"></i> Satır Ekle
+    </button>
+    <template id="proj-row-template">{{ proj_row(namespace(title='', description='', tech_stack='', link='')) }}</template>
+  </div>
+
+  <div class="flex justify-end mt-6">
+    <button type="submit" class="rounded-lg bg-indigo-600 text-white font-semibold px-6 py-2.5 hover:bg-indigo-700 flex items-center gap-2">
+      <i class="fa-solid fa-floppy-disk"></i> Kaydet
+    </button>
+  </div>
+</form>
+{% endblock %}

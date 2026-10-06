@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+{% set pct = student.profile_completion() %}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Merhaba, {{ student.full_name }} 👋</h1>
+    <p class="text-slate-500 text-sm">{{ student.department or "Bölüm belirtilmedi" }}</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="{{ url_for('student_preview') }}" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50 flex items-center gap-2">
+      <i class="fa-regular fa-eye"></i> Kurumlara Nasıl Görünüyorum?
+    </a>
+    <a href="{{ url_for('student_cv_form') }}" class="rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm font-semibold hover:bg-indigo-700 flex items-center gap-2">
+      <i class="fa-solid fa-pen"></i> CV'mi Düzenle
+    </a>
+  </div>
+</div>
+
+<!-- Profil doluluk kartı -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
+  <div class="flex items-center justify-between mb-2">
+    <h2 class="font-semibold text-slate-800">Profil Doluluk Oranı</h2>
+    <span class="text-sm font-bold {% if pct >= 85 %}text-emerald-600{% elif pct >= 50 %}text-amber-600{% else %}text-rose-600{% endif %}">
+      %{{ pct }}
+    </span>
+  </div>
+  <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+    <div class="h-full rounded-full {% if pct >= 85 %}bg-emerald-500{% elif pct >= 50 %}bg-amber-500{% else %}bg-rose-500{% endif %}"
+         style="width: {{ pct }}%;"></div>
+  </div>
+
+  {% set missing = student.missing_sections() %}
+  {% if missing %}
+    <div class="mt-4 flex flex-wrap gap-2">
+      {% for item in missing %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full">
+          <i class="fa-solid fa-triangle-exclamation"></i> {{ item }} eksik
+        </span>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="mt-4 text-sm text-emerald-600 font-semibold flex items-center gap-1.5">
+      <i class="fa-solid fa-circle-check"></i> Profiliniz eksiksiz görünüyor!
+    </p>
+  {% endif %}
+</div>
+
+<!-- İstatistik kartları -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    <div class="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2">
+      <i class="fa-solid fa-book"></i>
+    </div>
+    <p class="text-xl font-bold text-slate-900">{{ student.educations|length }}</p>
+    <p class="text-xs text-slate-500">Eğitim</p>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+      <i class="fa-solid fa-briefcase"></i>
+    </div>
+    <p class="text-xl font-bold text-slate-900">{{ student.experiences|length }}</p>
+    <p class="text-xs text-slate-500">Deneyim</p>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-2">
+      <i class="fa-solid fa-certificate"></i>
+    </div>
+    <p class="text-xl font-bold text-slate-900">{{ student.certificates|length }}</p>
+    <p class="text-xs text-slate-500">Sertifika</p>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    <div class="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center mb-2">
+      <i class="fa-solid fa-diagram-project"></i>
+    </div>
+    <p class="text-xl font-bold text-slate-900">{{ student.projects|length }}</p>
+    <p class="text-xs text-slate-500">Proje</p>
+  </div>
+</div>
+
+<!-- Transkript durumu -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center justify-between flex-wrap gap-4">
+  <div class="flex items-center gap-4">
+    <div class="w-11 h-11 rounded-xl flex items-center justify-center text-lg
+      {% if student.transcript_filename %}bg-emerald-50 text-emerald-600{% else %}bg-slate-100 text-slate-400{% endif %}">
+      <i class="fa-solid fa-file-lines"></i>
+    </div>
+    <div>
+      <p class="font-semibold text-slate-800">Transkript</p>
+      <p class="text-sm text-slate-500">
+        {% if student.transcript_filename %}Yüklendi{% else %}Henüz yüklenmedi{% endif %}
+      </p>
+    </div>
+  </div>
+  {% if student.transcript_filename %}
+    <a href="{{ url_for('download_own_transcript') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
+      Görüntüle <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i>
+    </a>
+  {% else %}
+    <a href="{{ url_for('student_cv_form') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
+      Şimdi Yükle <i class="fa-solid fa-arrow-right ml-1"></i>
+    </a>
+  {% endif %}
+</div>
+{% endblock %}

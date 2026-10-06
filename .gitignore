@@ -1,0 +1,37 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# --- Sanal ortam (virtualenv) ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- Veritabanı (kullanıcı verisi içerir, repoya girmez) ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Ortam değişkenleri / gizli anahtarlar ---
+.env
+.env.*
+instance/
+
+# --- Yüklenen dosyalar (kişisel veri: fotoğraf, transkript) ---
+uploads/photos/*
+uploads/transcripts/*
+# ...ama klasörlerin kendisi repoda kalsın:
+!uploads/photos/.gitkeep
+!uploads/transcripts/.gitkeep
+
+# --- Editör / IDE ---
+.vscode/
+.idea/
+*.swp
+
+# --- İşletim sistemi ---
+.DS_Store
+Thumbs.db

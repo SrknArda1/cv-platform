@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="text-center py-10">
+  <span class="inline-block bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full mb-4">
+    Öğrenci &amp; Kurum Kariyer Platformu
+  </span>
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-3">Yeteneği fırsatla buluşturun</h1>
+  <p class="text-slate-500 max-w-xl mx-auto">
+    Öğrenciler özgeçmişlerini oluşturur ve transkriptlerini yükler; kurumlar bölüme göre
+    filtreleyerek doğru adayları hızlıca bulur.
+  </p>
+</div>
+
+<div class="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col">
+    <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl mb-4">
+      <i class="fa-solid fa-user-graduate"></i>
+    </div>
+    <h2 class="text-lg font-bold text-slate-900 mb-1">Öğrenciyim</h2>
+    <p class="text-sm text-slate-500 mb-6 flex-1">
+      Eğitim, deneyim, proje ve sertifikalarınızı ekleyin; transkriptinizi yükleyin,
+      kurumlar tarafından keşfedilin.
+    </p>
+    <div class="flex gap-2">
+      <a class="flex-1 text-center rounded-lg bg-indigo-600 text-white font-semibold py-2.5 hover:bg-indigo-700 transition" href="{{ url_for('student_login') }}">Giriş Yap</a>
+      <a class="flex-1 text-center rounded-lg border border-slate-200 font-semibold py-2.5 hover:bg-slate-50 transition" href="{{ url_for('student_register') }}">Kayıt Ol</a>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col">
+    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl mb-4">
+      <i class="fa-solid fa-building"></i>
+    </div>
+    <h2 class="text-lg font-bold text-slate-900 mb-1">Kurumum</h2>
+    <p class="text-sm text-slate-500 mb-6 flex-1">
+      Bölüme göre filtreleyin, adayları arayın, CV'leri profesyonel formatta inceleyin
+      ve transkriptleri görüntüleyin.
+    </p>
+    <div class="flex gap-2">
+      <a class="flex-1 text-center rounded-lg bg-emerald-600 text-white font-semibold py-2.5 hover:bg-emerald-700 transition" href="{{ url_for('company_login') }}">Giriş Yap</a>
+      <a class="flex-1 text-center rounded-lg border border-slate-200 font-semibold py-2.5 hover:bg-slate-50 transition" href="{{ url_for('company_register') }}">Kayıt Ol</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

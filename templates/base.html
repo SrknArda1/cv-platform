@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Kariyer Portalı{% endblock %}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+<header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+    <a href="{{ url_for('index') }}" class="flex items-center gap-2 font-bold text-indigo-600 text-lg">
+      <i class="fa-solid fa-graduation-cap"></i>
+      <span>Kariyer Portalı</span>
+    </a>
+
+    <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+      {% if current_user.is_authenticated %}
+        {% if current_user.role == 'student' %}
+          <a href="{{ url_for('student_dashboard') }}" class="text-slate-600 hover:text-indigo-600">Panelim</a>
+          <a href="{{ url_for('student_cv_form') }}" class="text-slate-600 hover:text-indigo-600">CV'mi Düzenle</a>
+          <a href="{{ url_for('student_preview') }}" class="text-slate-600 hover:text-indigo-600">CV Önizleme</a>
+        {% else %}
+          <a href="{{ url_for('company_dashboard') }}" class="text-slate-600 hover:text-indigo-600">Aday Havuzu</a>
+        {% endif %}
+        <div class="flex items-center gap-3 pl-5 border-l border-slate-200">
+          <span class="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
+            {{ current_user.initials }}
+          </span>
+          <a href="{{ url_for('logout') }}" class="text-slate-400 hover:text-rose-600 text-base" title="Çıkış Yap">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </a>
+        </div>
+      {% else %}
+        <a href="{{ url_for('student_login') }}" class="text-slate-600 hover:text-indigo-600">Öğrenci Girişi</a>
+        <a href="{{ url_for('company_login') }}" class="rounded-lg bg-indigo-600 text-white px-4 py-2 font-semibold hover:bg-indigo-700 transition">Kurum Girişi</a>
+      {% endif %}
+    </nav>
+
+    <button id="mobile-menu-btn" class="md:hidden text-slate-600 text-xl">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </div>
+
+  <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 px-4 py-3 space-y-3 text-sm font-medium bg-white">
+    {% if current_user.is_authenticated %}
+      <div class="flex items-center gap-3 pb-2 border-b border-slate-100">
+        <span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
+          {{ current_user.initials }}
+        </span>
+        <span class="text-slate-500">{{ current_user.full_name or current_user.company_name }}</span>
+      </div>
+      {% if current_user.role == 'student' %}
+        <a href="{{ url_for('student_dashboard') }}" class="block py-1">Panelim</a>
+        <a href="{{ url_for('student_cv_form') }}" class="block py-1">CV'mi Düzenle</a>
+        <a href="{{ url_for('student_preview') }}" class="block py-1">CV Önizleme</a>
+      {% else %}
+        <a href="{{ url_for('company_dashboard') }}" class="block py-1">Aday Havuzu</a>
+      {% endif %}
+      <a href="{{ url_for('logout') }}" class="block py-1 text-rose-600">Çıkış Yap</a>
+    {% else %}
+      <a href="{{ url_for('student_login') }}" class="block py-1">Öğrenci Girişi</a>
+      <a href="{{ url_for('company_login') }}" class="block py-1">Kurum Girişi</a>
+    {% endif %}
+  </div>
+</header>
+
+<main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="space-y-2 mb-6">
+        {% for category, message in messages %}
+          <div class="flex items-center gap-2 rounded-lg px-4 py-3 text-sm border
+            {% if category == 'error' %} bg-rose-50 text-rose-700 border-rose-200
+            {% else %} bg-emerald-50 text-emerald-700 border-emerald-200 {% endif %}">
+            <i class="fa-solid {{ 'fa-circle-exclamation' if category == 'error' else 'fa-circle-check' }}"></i>
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="text-center text-xs text-slate-400 py-6">
+  Kariyer Portalı — Öğrenci ve Kurum eşleştirme platformu
+</footer>
+
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
