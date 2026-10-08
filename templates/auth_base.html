@@ -1,0 +1,26 @@
+{#
+  Giriş ve kayıt sayfalarının ortak iskeleti.
+  Dört sayfa (öğrenci/kurum × giriş/kayıt) yalnızca başlık, alanlar ve alt
+  bağlantı bakımından farklı; düzen, tipografi ve buton burada tek yerde
+  durur. Bir sayfa bunu `{% extends "auth_base.html" %}` ile kullanır.
+#}
+{% extends "base.html" %}
+
+{% block main_class %}app-main--center{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <header class="auth-head">
+    <span class="eyebrow">{% block auth_eyebrow %}{% endblock %}</span>
+    <h1 class="auth-title">{% block auth_title %}{% endblock %}</h1>
+    <p class="auth-text">{% block auth_text %}{% endblock %}</p>
+  </header>
+
+  <form method="POST" class="form-stack">
+    {% block auth_fields %}{% endblock %}
+    <button class="btn btn-primary btn-lg btn-block" type="submit">{% block auth_submit %}Gönder{% endblock %}</button>
+  </form>
+
+  <p class="auth-foot">{% block auth_foot %}{% endblock %}</p>
+</section>
+{% endblock %}

@@ -1,45 +1,49 @@
 {% extends "base.html" %}
+{% block title %}Kariyer Portalı{% endblock %}
+{% block main_class %}app-main--center{% endblock %}
+
 {% block content %}
-<div class="text-center py-10">
-  <span class="inline-block bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full mb-4">
-    Öğrenci &amp; Kurum Kariyer Platformu
-  </span>
-  <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-3">Yeteneği fırsatla buluşturun</h1>
-  <p class="text-slate-500 max-w-xl mx-auto">
-    Öğrenciler özgeçmişlerini oluşturur ve transkriptlerini yükler; kurumlar bölüme göre
-    filtreleyerek doğru adayları hızlıca bulur.
+<section class="hero">
+  <h1 class="hero-title">Kampüsün aday havuzu.</h1>
+  <p class="hero-text">
+    Öğrenciler özgeçmişini ve transkriptini burada toplar; kurumlar bölüme göre
+    filtreleyip adayları karşılaştırır.
   </p>
-</div>
+</section>
 
-<div class="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
-  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col">
-    <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl mb-4">
-      <i class="fa-solid fa-user-graduate"></i>
+<div class="gates">
+  <section class="gate">
+    <span class="gate-num">01</span>
+    <div>
+      <p class="gate-label">Öğrenci</p>
+      <h2 class="gate-title">CV'nizi bölüm bölüm kurun</h2>
+      <p class="gate-text">
+        Eğitim, deneyim, proje ve sertifikalarınızı ayrı ayrı girin,
+        transkriptinizi yükleyin. Kurumlara nasıl göründüğünüzü her an
+        önizleyebilirsiniz.
+      </p>
+      <div class="gate-links">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('student_login') }}">Giriş yap</a>
+        <a class="link-accent" href="{{ url_for('student_register') }}">Kayıt olun</a>
+      </div>
     </div>
-    <h2 class="text-lg font-bold text-slate-900 mb-1">Öğrenciyim</h2>
-    <p class="text-sm text-slate-500 mb-6 flex-1">
-      Eğitim, deneyim, proje ve sertifikalarınızı ekleyin; transkriptinizi yükleyin,
-      kurumlar tarafından keşfedilin.
-    </p>
-    <div class="flex gap-2">
-      <a class="flex-1 text-center rounded-lg bg-indigo-600 text-white font-semibold py-2.5 hover:bg-indigo-700 transition" href="{{ url_for('student_login') }}">Giriş Yap</a>
-      <a class="flex-1 text-center rounded-lg border border-slate-200 font-semibold py-2.5 hover:bg-slate-50 transition" href="{{ url_for('student_register') }}">Kayıt Ol</a>
-    </div>
-  </div>
+  </section>
 
-  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col">
-    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl mb-4">
-      <i class="fa-solid fa-building"></i>
+  <section class="gate">
+    <span class="gate-num">02</span>
+    <div>
+      <p class="gate-label">Kurum</p>
+      <h2 class="gate-title">Adayları tarayın ve karşılaştırın</h2>
+      <p class="gate-text">
+        Bölüme, profil doluluğuna ve transkript durumuna göre filtreleyin;
+        ortalamaya veya deneyim sayısına göre sıralayın. CV'yi belge
+        düzeninde inceleyin.
+      </p>
+      <div class="gate-links">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('company_login') }}">Giriş yap</a>
+        <a class="link-accent" href="{{ url_for('company_register') }}">Kayıt olun</a>
+      </div>
     </div>
-    <h2 class="text-lg font-bold text-slate-900 mb-1">Kurumum</h2>
-    <p class="text-sm text-slate-500 mb-6 flex-1">
-      Bölüme göre filtreleyin, adayları arayın, CV'leri profesyonel formatta inceleyin
-      ve transkriptleri görüntüleyin.
-    </p>
-    <div class="flex gap-2">
-      <a class="flex-1 text-center rounded-lg bg-emerald-600 text-white font-semibold py-2.5 hover:bg-emerald-700 transition" href="{{ url_for('company_login') }}">Giriş Yap</a>
-      <a class="flex-1 text-center rounded-lg border border-slate-200 font-semibold py-2.5 hover:bg-slate-50 transition" href="{{ url_for('company_register') }}">Kayıt Ol</a>
-    </div>
-  </div>
+  </section>
 </div>
 {% endblock %}

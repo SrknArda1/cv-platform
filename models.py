@@ -63,6 +63,39 @@ class User(UserMixin, db.Model):
             return parts[0][0].upper()
         return (parts[0][0] + parts[-1][0]).upper()
 
+    @property
+    def latest_education(self):
+        """En güncel eğitim kaydı — bitiş yılı en büyük olan, yoksa son eklenen."""
+        if not self.educations:
+            return None
+
+        def year_key(edu):
+            try:
+                return int(str(edu.end_year or "").strip()[:4])
+            except (ValueError, TypeError):
+                return -1
+
+        return max(self.educations, key=year_key)
+
+    @property
+    def gpa_display(self):
+        """Aday havuzunda gösterilecek ortalama (ham metin, girildiği gibi)."""
+        edu = self.latest_education
+        gpa = (edu.gpa or "").strip() if edu else ""
+        return gpa or None
+
+    @property
+    def gpa_value(self):
+        """Sıralama için sayısal ortalama. gpa metin alanı olduğu için
+        '3,42' gibi virgüllü girişleri de tolere eder; çözülemezse None."""
+        gpa = self.gpa_display
+        if not gpa:
+            return None
+        try:
+            return float(gpa.replace(",", "."))
+        except ValueError:
+            return None
+
     def profile_completion(self):
         """Öğrenci profilinin doluluk yüzdesini hesaplar (0-100)."""
         if self.role != "student":

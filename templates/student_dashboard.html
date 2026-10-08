@@ -1,104 +1,101 @@
 {% extends "base.html" %}
+{% block title %}Panelim — Kariyer Portalı{% endblock %}
+
 {% block content %}
 {% set pct = student.profile_completion() %}
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+{% set missing = student.missing_sections() %}
+
+<div class="docbar">
   <div>
-    <h1 class="text-2xl font-bold text-slate-900">Merhaba, {{ student.full_name }} 👋</h1>
-    <p class="text-slate-500 text-sm">{{ student.department or "Bölüm belirtilmedi" }}</p>
+    <span class="eyebrow">Öğrenci paneli</span>
+    <span class="backlink">{{ student.department or 'Bölüm belirtilmemiş' }}</span>
   </div>
-  <div class="flex gap-2">
-    <a href="{{ url_for('student_preview') }}" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50 flex items-center gap-2">
-      <i class="fa-regular fa-eye"></i> Kurumlara Nasıl Görünüyorum?
-    </a>
-    <a href="{{ url_for('student_cv_form') }}" class="rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm font-semibold hover:bg-indigo-700 flex items-center gap-2">
-      <i class="fa-solid fa-pen"></i> CV'mi Düzenle
-    </a>
+  <div class="docbar-actions">
+    <a class="btn btn-outline" href="{{ url_for('student_preview') }}">Önizleme</a>
+    <a class="btn btn-primary" href="{{ url_for('student_cv_form') }}">CV'mi düzenle</a>
   </div>
 </div>
 
-<!-- Profil doluluk kartı -->
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
-  <div class="flex items-center justify-between mb-2">
-    <h2 class="font-semibold text-slate-800">Profil Doluluk Oranı</h2>
-    <span class="text-sm font-bold {% if pct >= 85 %}text-emerald-600{% elif pct >= 50 %}text-amber-600{% else %}text-rose-600{% endif %}">
-      %{{ pct }}
-    </span>
-  </div>
-  <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-    <div class="h-full rounded-full {% if pct >= 85 %}bg-emerald-500{% elif pct >= 50 %}bg-amber-500{% else %}bg-rose-500{% endif %}"
-         style="width: {{ pct }}%;"></div>
-  </div>
+<article class="doc">
 
-  {% set missing = student.missing_sections() %}
-  {% if missing %}
-    <div class="mt-4 flex flex-wrap gap-2">
-      {% for item in missing %}
-        <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full">
-          <i class="fa-solid fa-triangle-exclamation"></i> {{ item }} eksik
-        </span>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p class="mt-4 text-sm text-emerald-600 font-semibold flex items-center gap-1.5">
-      <i class="fa-solid fa-circle-check"></i> Profiliniz eksiksiz görünüyor!
-    </p>
-  {% endif %}
-</div>
-
-<!-- İstatistik kartları -->
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-    <div class="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2">
-      <i class="fa-solid fa-book"></i>
-    </div>
-    <p class="text-xl font-bold text-slate-900">{{ student.educations|length }}</p>
-    <p class="text-xs text-slate-500">Eğitim</p>
-  </div>
-  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-    <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
-      <i class="fa-solid fa-briefcase"></i>
-    </div>
-    <p class="text-xl font-bold text-slate-900">{{ student.experiences|length }}</p>
-    <p class="text-xs text-slate-500">Deneyim</p>
-  </div>
-  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-    <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-2">
-      <i class="fa-solid fa-certificate"></i>
-    </div>
-    <p class="text-xl font-bold text-slate-900">{{ student.certificates|length }}</p>
-    <p class="text-xs text-slate-500">Sertifika</p>
-  </div>
-  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-    <div class="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center mb-2">
-      <i class="fa-solid fa-diagram-project"></i>
-    </div>
-    <p class="text-xl font-bold text-slate-900">{{ student.projects|length }}</p>
-    <p class="text-xs text-slate-500">Proje</p>
-  </div>
-</div>
-
-<!-- Transkript durumu -->
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center justify-between flex-wrap gap-4">
-  <div class="flex items-center gap-4">
-    <div class="w-11 h-11 rounded-xl flex items-center justify-center text-lg
-      {% if student.transcript_filename %}bg-emerald-50 text-emerald-600{% else %}bg-slate-100 text-slate-400{% endif %}">
-      <i class="fa-solid fa-file-lines"></i>
-    </div>
-    <div>
-      <p class="font-semibold text-slate-800">Transkript</p>
-      <p class="text-sm text-slate-500">
-        {% if student.transcript_filename %}Yüklendi{% else %}Henüz yüklenmedi{% endif %}
+  <header class="doc-head">
+    <div class="doc-head-text">
+      <h1 class="doc-name">{{ student.full_name or 'İsimsiz' }}</h1>
+      <p class="doc-contact"><span>{{ student.email }}</span>
+        {% if student.phone %}<span>{{ student.phone }}</span>{% endif %}
       </p>
     </div>
-  </div>
-  {% if student.transcript_filename %}
-    <a href="{{ url_for('download_own_transcript') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
-      Görüntüle <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i>
-    </a>
-  {% else %}
-    <a href="{{ url_for('student_cv_form') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
-      Şimdi Yükle <i class="fa-solid fa-arrow-right ml-1"></i>
-    </a>
-  {% endif %}
-</div>
+    <span class="portrait doc-portrait">
+      {% if student.photo_filename %}
+        <img src="{{ url_for('uploaded_photo', filename=student.photo_filename) }}" alt="">
+      {% else %}
+        {{ student.initials }}
+      {% endif %}
+    </span>
+  </header>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Profil doluluğu</h2>
+    <div class="gauge {{ 'is-high' if pct >= 85 else 'is-mid' if pct >= 50 else '' }}">
+      <span class="gauge-num">%{{ pct }}</span>
+      <span class="gauge-note">
+        {% if pct >= 85 %}
+          Profiliniz kurumlara gösterilmeye hazır.
+        {% else %}
+          %85 ve üzeri profiller eksiksiz sayılır.
+        {% endif %}
+      </span>
+      <div class="gauge-track"><div class="gauge-fill" style="width:{{ pct }}%"></div></div>
+    </div>
+
+    {% if missing %}
+      <ul class="checklist">
+        {% for item in missing %}<li>{{ item }}</li>{% endfor %}
+      </ul>
+    {% else %}
+      <p class="checklist-done">Tüm bölümler dolu.</p>
+    {% endif %}
+  </section>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">CV içeriği</h2>
+    <div class="stat-row">
+      <div class="stat">
+        <span class="stat-num">{{ student.educations|length }}</span>
+        <span class="stat-label">Eğitim</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">{{ student.experiences|length }}</span>
+        <span class="stat-label">Deneyim</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">{{ student.certificates|length }}</span>
+        <span class="stat-label">Sertifika</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">{{ student.projects|length }}</span>
+        <span class="stat-label">Proje</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Transkript</h2>
+    <div class="status-row">
+      <p class="status-text">
+        {% if student.transcript_filename %}
+          Yüklendi. Kurumlar CV'nizle birlikte görüntüleyebilir.
+        {% else %}
+          Henüz yüklenmedi. Kurumlar transkripti olan adayları ayrıca filtreleyebiliyor.
+        {% endif %}
+      </p>
+      {% if student.transcript_filename %}
+        <a class="btn btn-outline" href="{{ url_for('download_own_transcript') }}" target="_blank" rel="noopener">Görüntüle</a>
+      {% else %}
+        <a class="btn btn-primary" href="{{ url_for('student_cv_form') }}">Şimdi yükle</a>
+      {% endif %}
+    </div>
+  </section>
+
+</article>
 {% endblock %}

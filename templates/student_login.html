@@ -1,27 +1,22 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-  <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg mb-4">
-    <i class="fa-solid fa-right-to-bracket"></i>
-  </div>
-  <h1 class="text-xl font-bold text-slate-900 mb-1">Öğrenci Girişi</h1>
-  <p class="text-sm text-slate-500 mb-6">Hesabınıza giriş yapın.</p>
+{% extends "auth_base.html" %}
 
-  <form method="POST" class="space-y-4">
-    <div>
-      <label class="block text-sm font-semibold text-slate-700 mb-1">E-posta</label>
-      <input type="email" name="email" required class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500">
-    </div>
-    <div>
-      <label class="block text-sm font-semibold text-slate-700 mb-1">Şifre</label>
-      <input type="password" name="password" required class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500">
-    </div>
-    <button type="submit" class="w-full rounded-lg bg-indigo-600 text-white font-semibold py-2.5 hover:bg-indigo-700 transition">
-      Giriş Yap
-    </button>
-  </form>
-  <p class="text-sm text-slate-500 mt-5 text-center">
-    Hesabınız yok mu? <a href="{{ url_for('student_register') }}" class="text-indigo-600 font-semibold">Kayıt olun</a>
-  </p>
-</div>
+{% block title %}Öğrenci Girişi — Kariyer Portalı{% endblock %}
+{% block auth_eyebrow %}Öğrenci{% endblock %}
+{% block auth_title %}Giriş yapın{% endblock %}
+{% block auth_text %}CV'nizi düzenlemek için hesabınıza girin.{% endblock %}
+{% block auth_submit %}Giriş yap{% endblock %}
+
+{% block auth_fields %}
+  <div class="field">
+    <label class="label" for="email">E-posta</label>
+    <input class="input input-lg" type="email" id="email" name="email" required autocomplete="email" autofocus>
+  </div>
+  <div class="field">
+    <label class="label" for="password">Şifre</label>
+    <input class="input input-lg" type="password" id="password" name="password" required autocomplete="current-password">
+  </div>
+{% endblock %}
+
+{% block auth_foot %}
+  Hesabınız yok mu? <a class="link-accent" href="{{ url_for('student_register') }}">Kayıt olun</a>
 {% endblock %}

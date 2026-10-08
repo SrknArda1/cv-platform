@@ -1,107 +1,174 @@
 {% extends "base.html" %}
+{% block title %}Aday Havuzu — Kariyer Portalı{% endblock %}
+
+{#
+  Sıralanabilir kolon başlığı.
+  Jinja makroları şablon bağlamını güvenilir biçimde görmediği için
+  sort/direction/filtreler açıkça parametre olarak geçilir.
+#}
+{% macro sort_th(key, label, sort, direction, base, numeric=false) %}
+  {%- if sort == key -%}
+    {%- set nxt = 'asc' if direction == 'desc' else 'desc' -%}
+  {%- else -%}
+    {%- set nxt = 'desc' if numeric else 'asc' -%}
+  {%- endif -%}
+  <a class="sort {{ 'is-active' if sort == key }}"
+     href="{{ url_for('company_dashboard', sort=key, dir=nxt, **base) }}">{{ label }}<span
+     class="sort-caret">{% if sort == key %}{{ '▼' if direction == 'desc' else '▲' }}{% endif %}</span></a>
+{% endmacro %}
+
 {% block content %}
-<div class="mb-6">
-  <h1 class="text-2xl font-bold text-slate-900">Aday Havuzu</h1>
-  <p class="text-slate-500 text-sm">{{ students|length }} aday listeleniyor</p>
+{# Sıralama bağlantıları mevcut filtreleri korusun #}
+{% set base = {
+     'q': q or none,
+     'department': selected_department or none,
+     'has_transcript': '1' if only_with_transcript else none,
+     'min_completion': min_completion or none
+   } %}
+{% set is_filtered = q or selected_department or only_with_transcript or min_completion %}
+
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Kurum paneli</span>
+    <h1 class="page-title">Aday Havuzu</h1>
+  </div>
+  <p class="count">
+    <strong>{{ students|length }}</strong> aday
+    {%- if is_filtered %} &middot; {{ total_students }} kayıt içinden filtrelendi{% endif -%}
+  </p>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+<form method="GET" class="toolbar">
+  <div class="field toolbar-grow">
+    <label class="label" for="f-q">Ara</label>
+    <input class="input input-search" type="search" id="f-q" name="q" value="{{ q }}"
+           placeholder="İsim, e-posta veya yetkinlik">
+  </div>
 
-  <!-- Filtre paneli -->
-  <aside class="lg:col-span-1">
-    <form method="GET" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-5 lg:sticky lg:top-24">
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 uppercase mb-2">Ada Göre Ara</label>
-        <div class="relative">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-          <input type="text" name="q" value="{{ q }}" placeholder="Öğrenci adı..."
-                 class="w-full rounded-lg border-slate-300 pl-9 text-sm">
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 uppercase mb-2">Bölüm</label>
-        <select name="department" class="w-full rounded-lg border-slate-300 text-sm">
-          <option value="">Tüm bölümler</option>
-          {% for dep in departments %}
-            <option value="{{ dep.name }}" {% if selected_department == dep.name %}selected{% endif %}>{{ dep.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <label class="flex items-center gap-2 text-sm text-slate-600">
-        <input type="checkbox" name="has_transcript" value="1" {% if only_with_transcript %}checked{% endif %}
-               class="rounded border-slate-300 text-indigo-600">
-        Sadece transkripti olanlar
-      </label>
-
-      <div class="flex gap-2 pt-1">
-        <button type="submit" class="flex-1 rounded-lg bg-indigo-600 text-white text-sm font-semibold py-2 hover:bg-indigo-700">
-          Filtrele
-        </button>
-        <a href="{{ url_for('company_dashboard') }}" class="rounded-lg border border-slate-200 text-sm font-semibold px-3 py-2 hover:bg-slate-50">
-          Temizle
-        </a>
-      </div>
-    </form>
-  </aside>
-
-  <!-- Aday kartları -->
-  <div class="lg:col-span-3">
-    {% if students %}
-    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-      {% for s in students %}
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col hover:shadow-md transition">
-        <div class="flex items-center gap-3 mb-3">
-          <span class="w-11 h-11 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden shadow-sm">
-            {% if s.photo_filename %}
-              <img src="{{ url_for('uploaded_photo', filename=s.photo_filename) }}" alt="{{ s.full_name }}" class="w-full h-full object-cover">
-            {% else %}
-              {{ s.initials }}
-            {% endif %}
-          </span>
-          <div class="min-w-0">
-            <p class="font-semibold text-slate-800 truncate">{{ s.full_name }}</p>
-            {% if s.department %}
-              <span class="inline-block text-xs font-semibold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full mt-0.5">
-                {{ s.department }}
-              </span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="text-xs text-slate-500 space-y-1 mb-4">
-          <p class="truncate"><i class="fa-solid fa-envelope w-4"></i> {{ s.email }}</p>
-          {% if s.phone %}<p><i class="fa-solid fa-phone w-4"></i> {{ s.phone }}</p>{% endif %}
-          <p>
-            {% if s.transcript_filename %}
-              <span class="text-emerald-600 font-semibold"><i class="fa-solid fa-circle-check"></i> Transkript mevcut</span>
-            {% else %}
-              <span class="text-slate-400"><i class="fa-regular fa-circle"></i> Transkript yok</span>
-            {% endif %}
-          </p>
-        </div>
-
-        <!-- Butonlar -->
-        <div class="mt-auto space-y-2">
-          <a href="{{ url_for('student_detail', student_id=s.id) }}"
-             class="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white text-sm font-semibold py-2 hover:bg-slate-700 transition">
-            CV'yi İncele
-          </a>
-          <a href="{{ url_for('download_student_cv_pdf', student_id=s.id) }}" 
-             class="w-full flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-semibold py-2 hover:bg-slate-50 hover:text-indigo-600 transition">
-            <i class="fa-solid fa-file-pdf text-rose-500"></i> PDF İndir
-          </a>
-        </div>
-      </div>
+  <div class="field toolbar-fixed">
+    <label class="label" for="f-dep">Bölüm</label>
+    <select class="select" id="f-dep" name="department">
+      <option value="">Tümü</option>
+      {% for dep in departments %}
+        <option value="{{ dep.name }}" {{ 'selected' if selected_department == dep.name }}>{{ dep.name }}</option>
       {% endfor %}
-    </div>
-    {% else %}
-    <div class="bg-white rounded-2xl border border-slate-200 border-dashed p-14 text-center text-slate-400">
-      <i class="fa-solid fa-user-slash text-3xl mb-3"></i>
-      <p>Filtrelerinize uyan aday bulunamadı.</p>
-    </div>
+    </select>
+  </div>
+
+  <div class="field toolbar-fixed">
+    <label class="label" for="f-min">Profil doluluğu</label>
+    <select class="select" id="f-min" name="min_completion">
+      <option value="0">Tümü</option>
+      <option value="50" {{ 'selected' if min_completion == 50 }}>%50 ve üzeri</option>
+      <option value="85" {{ 'selected' if min_completion == 85 }}>%85 ve üzeri (eksiksiz)</option>
+    </select>
+  </div>
+
+  <label class="check">
+    <input type="checkbox" name="has_transcript" value="1" {{ 'checked' if only_with_transcript }}>
+    Transkripti olanlar
+  </label>
+
+  {# Filtre değişince aktif sıralama kaybolmasın #}
+  <input type="hidden" name="sort" value="{{ sort }}">
+  <input type="hidden" name="dir" value="{{ direction }}">
+
+  <div class="toolbar-actions">
+    <button class="btn btn-primary" type="submit">Filtrele</button>
+    {% if is_filtered %}
+      <a class="btn btn-outline" href="{{ url_for('company_dashboard') }}">Temizle</a>
     {% endif %}
   </div>
+</form>
+
+{% if students %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{{ sort_th('name', 'Aday', sort, direction, base) }}</th>
+        <th>{{ sort_th('department', 'Bölüm', sort, direction, base) }}</th>
+        <th class="num">{{ sort_th('gpa', 'Ort.', sort, direction, base, numeric=true) }}</th>
+        <th class="num">{{ sort_th('experience', 'Deneyim', sort, direction, base, numeric=true) }}</th>
+        <th class="num">{{ sort_th('project', 'Proje', sort, direction, base, numeric=true) }}</th>
+        <th class="num">{{ sort_th('certificate', 'Sertifika', sort, direction, base, numeric=true) }}</th>
+        <th>{{ sort_th('transcript', 'Transkript', sort, direction, base, numeric=true) }}</th>
+        <th class="num">{{ sort_th('completion', 'Profil', sort, direction, base, numeric=true) }}</th>
+        <th><span class="hidden">İşlemler</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in students %}
+      {% set pct = s.profile_completion() %}
+      <tr>
+        <td class="cell-who">
+          <div class="who">
+            <span class="portrait portrait-md">
+              {% if s.photo_filename %}
+                <img src="{{ url_for('uploaded_photo', filename=s.photo_filename) }}" alt="">
+              {% else %}
+                {{ s.initials }}
+              {% endif %}
+            </span>
+            <span class="who-text">
+              <span class="who-name">{{ s.full_name or 'İsimsiz aday' }}</span>
+              <span class="who-mail">{{ s.email }}</span>
+            </span>
+          </div>
+        </td>
+
+        <td data-label="Bölüm">
+          {% if s.department %}
+            <span class="dept">{{ s.department }}</span>
+          {% else %}
+            <span class="state state-no">—</span>
+          {% endif %}
+        </td>
+
+        <td class="num {{ 'num-empty' if not s.gpa_display }}" data-label="Ortalama">
+          {{ s.gpa_display or '—' }}
+        </td>
+
+        <td class="num {{ 'num-empty' if not s.experiences }}" data-label="Deneyim">{{ s.experiences|length }}</td>
+        <td class="num {{ 'num-empty' if not s.projects }}" data-label="Proje">{{ s.projects|length }}</td>
+        <td class="num {{ 'num-empty' if not s.certificates }}" data-label="Sertifika">{{ s.certificates|length }}</td>
+
+        <td data-label="Transkript">
+          {% if s.transcript_filename %}
+            <a class="state state-yes" href="{{ url_for('download_transcript', student_id=s.id) }}"
+               target="_blank" rel="noopener">VAR &rarr;</a>
+          {% else %}
+            <span class="state state-no">YOK</span>
+          {% endif %}
+        </td>
+
+        <td class="num" data-label="Profil">
+          <span class="meter {{ 'is-high' if pct >= 85 else 'is-mid' if pct >= 50 else '' }}">
+            <span class="meter-track"><span class="meter-fill" style="width:{{ pct }}%"></span></span>
+            <span class="meter-val">%{{ pct }}</span>
+          </span>
+        </td>
+
+        <td class="col-actions">
+          <a class="btn-cell" href="{{ url_for('student_detail', student_id=s.id) }}">CV</a>
+          <a class="btn-cell" href="{{ url_for('download_student_cv_pdf', student_id=s.id) }}">PDF</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
+{% else %}
+<div class="empty">
+  <p class="empty-title">{{ 'Filtrelere uyan aday yok' if is_filtered else 'Havuzda henüz aday yok' }}</p>
+  <p class="empty-text">
+    {% if is_filtered %}
+      {{ total_students }} kayıtlı adaydan hiçbiri bu ölçütlere uymuyor.
+      <a class="link-accent" href="{{ url_for('company_dashboard') }}">Filtreleri temizle</a>
+    {% else %}
+      Öğrenciler profillerini oluşturdukça burada listelenecek.
+    {% endif %}
+  </p>
+</div>
+{% endif %}
 {% endblock %}

@@ -21,12 +21,13 @@ function initTabs() {
     btn.addEventListener("click", () => {
       const target = btn.getAttribute("data-tab-target");
 
+      // Görünüm tamamen CSS'te: tek bir "is-active" sınıfı taşınır.
       tabButtons.forEach((b) => {
-        b.classList.remove("active", "bg-indigo-600", "text-white");
-        b.classList.add("bg-white", "text-slate-600");
+        b.classList.remove("is-active");
+        b.setAttribute("aria-selected", "false");
       });
-      btn.classList.add("active", "bg-indigo-600", "text-white");
-      btn.classList.remove("bg-white", "text-slate-600");
+      btn.classList.add("is-active");
+      btn.setAttribute("aria-selected", "true");
 
       tabPanels.forEach((p) => p.classList.add("hidden"));
       const activePanel = document.querySelector(`[data-tab-panel="${target}"]`);

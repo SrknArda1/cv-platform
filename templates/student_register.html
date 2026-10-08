@@ -1,31 +1,27 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-  <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg mb-4">
-    <i class="fa-solid fa-user-graduate"></i>
-  </div>
-  <h1 class="text-xl font-bold text-slate-900 mb-1">Öğrenci Kaydı</h1>
-  <p class="text-sm text-slate-500 mb-6">Hesabınızı oluşturun, özgeçmişinizi saniyeler içinde hazırlayın.</p>
+{% extends "auth_base.html" %}
 
-  <form method="POST" class="space-y-4">
-    <div>
-      <label class="block text-sm font-semibold text-slate-700 mb-1">Ad Soyad</label>
-      <input type="text" name="full_name" required class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500">
-    </div>
-    <div>
-      <label class="block text-sm font-semibold text-slate-700 mb-1">E-posta</label>
-      <input type="email" name="email" required class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500">
-    </div>
-    <div>
-      <label class="block text-sm font-semibold text-slate-700 mb-1">Şifre</label>
-      <input type="password" name="password" required minlength="6" class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500">
-    </div>
-    <button type="submit" class="w-full rounded-lg bg-indigo-600 text-white font-semibold py-2.5 hover:bg-indigo-700 transition">
-      Kayıt Ol
-    </button>
-  </form>
-  <p class="text-sm text-slate-500 mt-5 text-center">
-    Zaten hesabınız var mı? <a href="{{ url_for('student_login') }}" class="text-indigo-600 font-semibold">Giriş yapın</a>
-  </p>
-</div>
+{% block title %}Öğrenci Kaydı — Kariyer Portalı{% endblock %}
+{% block auth_eyebrow %}Öğrenci{% endblock %}
+{% block auth_title %}Hesap oluşturun{% endblock %}
+{% block auth_text %}Kaydolduktan sonra CV'nizi bölüm bölüm doldurabilirsiniz.{% endblock %}
+{% block auth_submit %}Kayıt ol{% endblock %}
+
+{% block auth_fields %}
+  <div class="field">
+    <label class="label" for="full_name">Ad soyad</label>
+    <input class="input input-lg" type="text" id="full_name" name="full_name" required autocomplete="name" autofocus>
+  </div>
+  <div class="field">
+    <label class="label" for="email">E-posta</label>
+    <input class="input input-lg" type="email" id="email" name="email" required autocomplete="email">
+  </div>
+  <div class="field">
+    <label class="label" for="password">Şifre</label>
+    <input class="input input-lg" type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
+    <span class="field-hint">En az 6 karakter.</span>
+  </div>
+{% endblock %}
+
+{% block auth_foot %}
+  Zaten hesabınız var mı? <a class="link-accent" href="{{ url_for('student_login') }}">Giriş yapın</a>
 {% endblock %}

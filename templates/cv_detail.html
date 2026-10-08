@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% block title %}{{ student.full_name or 'Aday' }} — Kariyer Portalı{% endblock %}
+
 {% block content %}
 {% if is_own_preview %}
   {% set transcript_url = url_for('download_own_transcript') %}
@@ -10,205 +12,162 @@
   {% set back_label = "Aday Havuzuna dön" %}
 {% endif %}
 
-<a href="{{ back_url }}" class="text-sm text-slate-500 hover:text-indigo-600 inline-block mb-4">&larr; {{ back_label }}</a>
+<div class="docbar">
+  <a class="backlink" href="{{ back_url }}">&larr; {{ back_label }}</a>
 
-{% if is_own_preview %}
-<div class="mb-6 flex items-center gap-2 text-xs font-semibold bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg w-fit">
-  <i class="fa-regular fa-eye"></i> Bu, CV'nizin kurumlara nasıl göründüğünün önizlemesidir.
-</div>
-{% endif %}
-
-<div class="grid lg:grid-cols-3 gap-6">
-
-  <!-- Sol kolon: iletişim ve özet -->
-  <aside class="lg:col-span-1">
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 lg:sticky lg:top-24">
-      <div class="flex flex-col items-center text-center mb-5">
-  <div class="w-20 h-20 rounded-full bg-indigo-600 text-white flex items-center justify-center text-2xl font-bold mb-3 overflow-hidden shadow-sm">
-    {% if student.photo_filename %}
-      <img src="{{ url_for('uploaded_photo', filename=student.photo_filename) }}" 
-           alt="{{ student.full_name }}" 
-           class="w-full h-full object-cover">
+  <div class="docbar-actions">
+    {% if student.transcript_filename %}
+      <a class="btn btn-primary" href="{{ transcript_url }}" target="_blank" rel="noopener">Transkript</a>
     {% else %}
-      <span>{{ student.initials }}</span>
+      <span class="btn btn-disabled">Transkript yok</span>
+    {% endif %}
+    {% if not is_own_preview %}
+      <a class="btn btn-outline" href="{{ url_for('download_student_cv_pdf', student_id=student.id) }}">PDF</a>
     {% endif %}
   </div>
-  <h1 class="text-lg font-bold text-slate-900">{{ student.full_name }}</h1>
-  {% if student.department %}
-    <span class="inline-block text-xs font-semibold bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full mt-2">
-      {{ student.department }}
+</div>
+
+{% if is_own_preview %}
+  <p class="notice">Bu sayfa, CV'nizin kurumlara göründüğü halidir. Salt okunurdur.</p>
+{% endif %}
+
+<article class="doc">
+
+  <header class="doc-head">
+    <div class="doc-head-text">
+      <h1 class="doc-name">{{ student.full_name or 'İsimsiz aday' }}</h1>
+      {% if student.department %}
+        <p class="doc-dept">{{ student.department }}</p>
+      {% endif %}
+      <p class="doc-contact">
+        <span>{{ student.email }}</span>
+        {% if student.phone %}<span>{{ student.phone }}</span>{% endif %}
+      </p>
+    </div>
+
+    <span class="portrait doc-portrait">
+      {% if student.photo_filename %}
+        <img src="{{ url_for('uploaded_photo', filename=student.photo_filename) }}" alt="">
+      {% else %}
+        {{ student.initials }}
+      {% endif %}
     </span>
-  {% endif %}
-</div>
+  </header>
 
-      <div class="space-y-2 text-sm text-slate-600 mb-5 border-t border-slate-100 pt-4">
-        <p class="flex items-center gap-2"><i class="fa-solid fa-envelope w-4 text-slate-400"></i> {{ student.email }}</p>
-        {% if student.phone %}
-          <p class="flex items-center gap-2"><i class="fa-solid fa-phone w-4 text-slate-400"></i> {{ student.phone }}</p>
-        {% endif %}
-      </div>
-
-      {% if student.summary %}
-        <div class="border-t border-slate-100 pt-4 mb-5">
-          <h2 class="text-xs font-bold text-slate-500 uppercase mb-2">Özet</h2>
-          <p class="text-sm text-slate-600 leading-relaxed">{{ student.summary }}</p>
-        </div>
-      {% endif %}
-
-     <div class="border-t border-slate-100 pt-4 space-y-2.5">
-  <!-- Transkript Butonu -->
-  {% if student.transcript_filename %}
-    <a href="{{ transcript_url }}" target="_blank"
-       class="w-full flex items-center justify-center gap-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold py-2.5 hover:bg-emerald-700 transition">
-      <i class="fa-solid fa-file-arrow-down"></i> Transkripti Görüntüle / İndir
-    </a>
-  {% else %}
-    <div class="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-100 text-slate-400 text-sm font-semibold py-2.5">
-      <i class="fa-solid fa-file-circle-xmark"></i> Transkript Yüklenmemiş
-    </div>
+  {% if student.summary %}
+    <section class="doc-section">
+      <h2 class="doc-section-label">Özet</h2>
+      <p class="doc-text">{{ student.summary }}</p>
+    </section>
   {% endif %}
 
-  <!-- Kurum için CV PDF İndirme Butonu -->
-  {% if not is_own_preview %}
-    <a href="{{ url_for('download_student_cv_pdf', student_id=student.id) }}" 
-       class="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold py-2.5 hover:bg-indigo-700 transition">
-      <i class="fa-solid fa-file-pdf"></i> CV'yi PDF İndir
-    </a>
-  {% endif %}
-</div>
-      </div>
-      {% if student.skills %}
-        <div class="border-t border-slate-100 pt-4 mb-5">
-          <h2 class="text-xs font-bold text-slate-500 uppercase mb-2">Yetenekler</h2>
-          <div class="flex flex-wrap gap-1.5">
-            {% for skill in student.skills.split(',') %}
-              {% if skill.strip() %}
-                <span class="text-xs font-medium bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full border border-slate-200">
-                  {{ skill.strip() }}
-                </span>
-              {% endif %}
-            {% endfor %}
+  <section class="doc-section">
+    <h2 class="doc-section-label">Eğitim</h2>
+    {% if student.educations %}
+      {% for edu in student.educations %}
+        <div class="entry">
+          <div class="entry-date">
+            {%- if edu.start_year or edu.end_year -%}
+              {{ edu.start_year or '?' }}&ndash;{{ edu.end_year or 'devam' }}
+            {%- endif -%}
+          </div>
+          <div class="entry-body">
+            <div class="entry-title-row">
+              <span class="entry-title">{{ edu.school }}</span>
+              {% if edu.degree_type %}<span class="entry-badge">{{ edu.degree_type }}</span>{% endif %}
+            </div>
+            {% if edu.department %}<div class="entry-sub">{{ edu.department }}</div>{% endif %}
+            {% if edu.gpa %}<div class="entry-meta">Ortalama {{ edu.gpa }}</div>{% endif %}
           </div>
         </div>
-      {% endif %}
-    </div>
-  </aside>
+      {% endfor %}
+    {% else %}
+      <p class="doc-empty">Eğitim bilgisi eklenmemiş.</p>
+    {% endif %}
+  </section>
 
-  <!-- Sağ kolon: zaman çizelgesi -->
-  <div class="lg:col-span-2 space-y-6">
-
-   <!-- Eğitim -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-      <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-book text-indigo-600"></i> Eğitim
-      </h2>
-      {% if student.educations %}
-        {% for edu in student.educations %}
-        <div class="relative pl-6 pb-5 border-l-2 border-slate-200 last:border-transparent last:pb-0">
-          <span class="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-indigo-600 ring-4 ring-white"></span>
-          <div class="flex flex-wrap items-center gap-2">
-            <p class="font-semibold text-slate-800">{{ edu.school }}</p>
-            {% if edu.degree_type %}
-              <span class="text-[11px] font-semibold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">
-                {{ edu.degree_type }}
-              </span>
-            {% endif %}
+  <section class="doc-section">
+    <h2 class="doc-section-label">Deneyim</h2>
+    {% if student.experiences %}
+      {% for exp in student.experiences %}
+        <div class="entry">
+          <div class="entry-date">
+            {%- if exp.start_date or exp.end_date -%}
+              {{ exp.start_date or '?' }}&ndash;{{ exp.end_date or 'devam' }}
+            {%- endif -%}
           </div>
-          {% if edu.department %}<p class="text-sm text-slate-500">{{ edu.department }}</p>{% endif %}
-          <div class="flex items-center gap-3 text-xs text-slate-400 mt-1">
-            {% if edu.start_year or edu.end_year %}
-              <span>{{ edu.start_year }} - {{ edu.end_year or 'Devam Ediyor' }}</span>
-            {% endif %}
-            {% if edu.gpa %}
-              <span>&bull;</span>
-              <span class="font-medium text-slate-600">Ortalama: {{ edu.gpa }}</span>
-            {% endif %}
+          <div class="entry-body">
+            <div class="entry-title-row">
+              <span class="entry-title">{{ exp.position or 'Pozisyon belirtilmemiş' }}</span>
+            </div>
+            <div class="entry-sub">{{ exp.company }}</div>
+            {% if exp.description %}<p class="entry-text">{{ exp.description }}</p>{% endif %}
           </div>
         </div>
-        {% endfor %}
-      {% else %}
-        <p class="text-sm text-slate-400">Henüz eğitim bilgisi eklenmedi.</p>
-      {% endif %}
-    </div>
+      {% endfor %}
+    {% else %}
+      <p class="doc-empty">Deneyim eklenmemiş.</p>
+    {% endif %}
+  </section>
 
-    <!-- Deneyim -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-      <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-briefcase text-emerald-600"></i> Deneyim
-      </h2>
-      {% if student.experiences %}
-        {% for exp in student.experiences %}
-        <div class="relative pl-6 pb-5 border-l-2 border-slate-200 last:border-transparent last:pb-0">
-          <span class="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-emerald-600 ring-4 ring-white"></span>
-          <p class="font-semibold text-slate-800">{{ exp.position or "Pozisyon belirtilmedi" }}</p>
-          <p class="text-sm text-slate-500">{{ exp.company }}</p>
-          {% if exp.start_date or exp.end_date %}
-            <p class="text-xs text-slate-400 mt-1">{{ exp.start_date }} - {{ exp.end_date }}</p>
-          {% endif %}
-          {% if exp.description %}
-            <p class="text-sm text-slate-600 mt-2 leading-relaxed">{{ exp.description }}</p>
-          {% endif %}
+  <section class="doc-section">
+    <h2 class="doc-section-label">Sertifikalar</h2>
+    {% if student.certificates %}
+      {% for cert in student.certificates %}
+        <div class="entry">
+          <div class="entry-date">{{ cert.date or '' }}</div>
+          <div class="entry-body">
+            <div class="entry-title-row">
+              <span class="entry-title">{{ cert.name }}</span>
+            </div>
+            {% if cert.institution %}<div class="entry-sub">{{ cert.institution }}</div>{% endif %}
+          </div>
         </div>
-        {% endfor %}
-      {% else %}
-        <p class="text-sm text-slate-400">Henüz deneyim eklenmedi.</p>
-      {% endif %}
-    </div>
+      {% endfor %}
+    {% else %}
+      <p class="doc-empty">Sertifika eklenmemiş.</p>
+    {% endif %}
+  </section>
 
-    <!-- Sertifikalar -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-      <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-certificate text-amber-600"></i> Sertifikalar
-      </h2>
-      {% if student.certificates %}
-        {% for cert in student.certificates %}
-        <div class="relative pl-6 pb-5 border-l-2 border-slate-200 last:border-transparent last:pb-0">
-          <span class="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-amber-500 ring-4 ring-white"></span>
-          <p class="font-semibold text-slate-800">{{ cert.name }}</p>
-          {% if cert.institution %}<p class="text-sm text-slate-500">{{ cert.institution }}</p>{% endif %}
-          {% if cert.date %}<p class="text-xs text-slate-400 mt-1">{{ cert.date }}</p>{% endif %}
-        </div>
-        {% endfor %}
-      {% else %}
-        <p class="text-sm text-slate-400">Henüz sertifika eklenmedi.</p>
-      {% endif %}
-    </div>
-
-    <!-- Projeler -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-      <h2 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <i class="fa-solid fa-diagram-project text-rose-600"></i> Projeler
-      </h2>
-      {% if student.projects %}
-        <div class="grid sm:grid-cols-2 gap-4">
-          {% for proj in student.projects %}
-          <div class="border border-slate-200 rounded-xl p-4">
-            <div class="flex items-start justify-between gap-2">
-              <p class="font-semibold text-slate-800">{{ proj.title }}</p>
+  <section class="doc-section">
+    <h2 class="doc-section-label">Projeler</h2>
+    {% if student.projects %}
+      {% for proj in student.projects %}
+        <div class="entry">
+          <div class="entry-date"></div>
+          <div class="entry-body">
+            <div class="entry-title-row">
+              <span class="entry-title">{{ proj.title }}</span>
               {% if proj.link %}
-                <a href="{{ proj.link }}" target="_blank" class="text-slate-400 hover:text-indigo-600">
-                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                </a>
+                <a class="entry-link" href="{{ proj.link }}" target="_blank" rel="noopener">bağlantı &nearr;</a>
               {% endif %}
             </div>
-            {% if proj.description %}
-              <p class="text-sm text-slate-600 mt-2 leading-relaxed">{{ proj.description }}</p>
-            {% endif %}
+            {% if proj.description %}<p class="entry-text">{{ proj.description }}</p>{% endif %}
             {% if proj.tech_stack %}
-              <div class="flex flex-wrap gap-1.5 mt-3">
-                {% for tech in proj.tech_stack.split(',') %}
-                  <span class="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-1 rounded-full">{{ tech.strip() }}</span>
+              <p class="taglist">
+                {% for tech in proj.tech_stack.split(',') if tech.strip() %}
+                  <span>{{ tech.strip() }}</span>
                 {% endfor %}
-              </div>
+              </p>
             {% endif %}
           </div>
-          {% endfor %}
         </div>
-      {% else %}
-        <p class="text-sm text-slate-400">Henüz proje eklenmedi.</p>
-      {% endif %}
-    </div>
+      {% endfor %}
+    {% else %}
+      <p class="doc-empty">Proje eklenmemiş.</p>
+    {% endif %}
+  </section>
 
-  </div>
-</div>
+  {% if student.skills %}
+    <section class="doc-section">
+      <h2 class="doc-section-label">Yetkinlikler</h2>
+      <p class="taglist">
+        {% for skill in student.skills.split(',') if skill.strip() %}
+          <span>{{ skill.strip() }}</span>
+        {% endfor %}
+      </p>
+    </section>
+  {% endif %}
+
+</article>
 {% endblock %}

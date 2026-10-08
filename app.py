@@ -292,6 +292,23 @@ def company_login():
 
 # ---------- Kurum: aday havuzu & İndirme ----------
 
+# Aday havuzunda sıralanabilir kolonlar.
+# Her kolon için iki fonksiyon: (sıralama değeri, değer eksik mi?)
+# Ortalama ve doluluk yüzdesi SQL'de değil Python'da hesaplanıyor (biri metin
+# alanından parse ediliyor, diğeri ilişkilere bakan bir metot), bu yüzden
+# sıralamanın tamamı Python tarafında yapılır.
+CANDIDATE_SORTERS = {
+    "name":        (lambda s: (s.full_name or "").casefold(), lambda s: not (s.full_name or "").strip()),
+    "department":  (lambda s: (s.department or "").casefold(), lambda s: not (s.department or "").strip()),
+    "gpa":         (lambda s: s.gpa_value or 0.0, lambda s: s.gpa_value is None),
+    "experience":  (lambda s: len(s.experiences), lambda s: False),
+    "project":     (lambda s: len(s.projects), lambda s: False),
+    "certificate": (lambda s: len(s.certificates), lambda s: False),
+    "transcript":  (lambda s: bool(s.transcript_filename), lambda s: False),
+    "completion":  (lambda s: s.profile_completion(), lambda s: False),
+}
+
+
 @app.route("/company/dashboard")
 @login_required
 @role_required("company")
@@ -300,15 +317,45 @@ def company_dashboard():
     q = request.args.get("q", "").strip()
     only_with_transcript = request.args.get("has_transcript") == "1"
 
+    try:
+        min_completion = int(request.args.get("min_completion", 0))
+    except ValueError:
+        min_completion = 0
+
+    sort = request.args.get("sort", "name")
+    if sort not in CANDIDATE_SORTERS:
+        sort = "name"
+    direction = "desc" if request.args.get("dir") == "desc" else "asc"
+
     query = User.query.filter_by(role="student")
     if selected_department:
         query = query.filter_by(department=selected_department)
     if q:
-        query = query.filter(User.full_name.ilike(f"%{q}%"))
+        # İsim, e-posta ve yetkinliklerde birlikte ara
+        like = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                User.full_name.ilike(like),
+                User.email.ilike(like),
+                User.skills.ilike(like),
+            )
+        )
     if only_with_transcript:
         query = query.filter(User.transcript_filename.isnot(None))
 
-    students = query.order_by(User.full_name).all()
+    students = query.all()
+    total_students = User.query.filter_by(role="student").count()
+
+    if min_completion:
+        students = [s for s in students if s.profile_completion() >= min_completion]
+
+    # İki aşamalı kararlı sıralama: önce değere göre, sonra "eksik olanlar
+    # en sona" diye. Python'un sort'u kararlı olduğu için yön ne olursa olsun
+    # ortalaması girilmemiş adaylar listenin sonunda kalır.
+    value_of, is_missing = CANDIDATE_SORTERS[sort]
+    students.sort(key=value_of, reverse=(direction == "desc"))
+    students.sort(key=is_missing)
+
     departments = Department.query.order_by(Department.name).all()
 
     return render_template(
@@ -318,6 +365,10 @@ def company_dashboard():
         selected_department=selected_department,
         q=q,
         only_with_transcript=only_with_transcript,
+        min_completion=min_completion,
+        sort=sort,
+        direction=direction,
+        total_students=total_students,
     )
 
 

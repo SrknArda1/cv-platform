@@ -1,33 +1,1374 @@
-/* Tailwind CDN'in karşılamadığı birkaç küçük detay */
+/* ==========================================================================
+   Kariyer Portalı — tasarım sistemi
+   --------------------------------------------------------------------------
+   Tek bir süperfamilya (IBM Plex) iki register'da kullanılır:
+     Sans  → arayüz metni
+     Mono  → sayılar, kolon başlıkları, kod benzeri meta (tabular figürler)
+   Yüzeyler gölgeyle değil saç teli çizgilerle ayrılır; tek gölge token'ı
+   yalnızca yapışkan başlığın alt kenarı için vardır.
 
-input, select, textarea {
-  font-family: inherit;
+   NOT: Sınıf tabanlı yazılmıştır (çıplak element seçici neredeyse yok).
+   Tailwind CDN hâlâ sayfada olduğu için — henüz dönüştürülmemiş şablonlar
+   ona bağlı — Tailwind'in preflight reset'i ile çakışmamak adına body
+   stilleri bile `.app` sınıfı üzerinden verilir. Tailwind silindiğinde
+   buradaki hiçbir şey değişmez.
+   ========================================================================== */
+
+:root {
+  /* --- Yüzeyler: sıcak nötr "kağıt" paleti --- */
+  --paper:       #faf9f6;
+  --surface:     #ffffff;
+  --surface-2:   #f4f2ed;   /* tablo başlığı, satır hover */
+  --surface-3:   #ebe8e1;   /* basılı/aktif durum */
+
+  /* --- Çizgiler --- */
+  --rule:        #e6e2d9;   /* saç teli: satır ayırıcı, panel kenarı */
+  --rule-2:      #d3cec2;   /* belirgin: bölüm ayırıcı */
+
+  /* --- Mürekkep --- */
+  --ink:         #1a1917;   /* başlık, birincil metin */
+  --ink-2:       #4f4b43;   /* gövde, ikincil */
+  --ink-3:       #857f73;   /* meta, etiket, devre dışı */
+
+  /* --- Aksan: derin petrol mavisi (indigo DEĞİL) --- */
+  --accent:      #174455;
+  --accent-2:    #0e2f3c;   /* hover */
+  --accent-soft: #e8eef0;   /* seçili satır, yumuşak zemin */
+  --accent-ring: rgba(23, 68, 85, 0.22);
+
+  /* --- Anlamsal: hepsi bastırılmış, parlak değil --- */
+  --ok:          #2e6b4f;
+  --ok-soft:     #e9f0ec;
+  --warn:        #8a5a14;
+  --warn-soft:   #f5efe3;
+  --danger:      #9b2c2c;
+  --danger-soft: #f6eceb;
+
+  /* --- Tipografi --- */
+  --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+
+  --t-micro: 11px;   /* kolon başlığı, aralıklı büyük harf */
+  --t-xs:    12px;   /* meta, e-posta */
+  --t-sm:    13px;
+  --t-base:  14px;   /* yoğun araç gövdesi (tablo satırı) */
+  --t-md:    15px;   /* genel gövde metni */
+  --t-lg:    18px;
+  --t-xl:    23px;
+  --t-2xl:   31px;
+  --t-3xl:   44px;
+
+  /* --- Boşluk: 4px tabanlı --- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+
+  /* --- Yarıçap: tavan 3px. Büyük yuvarlaklık yok. --- */
+  --r-1: 2px;
+  --r-2: 3px;
+
+  /* --- Tek gölge --- */
+  --shadow: 0 1px 0 rgba(26, 25, 23, 0.04), 0 6px 20px -12px rgba(26, 25, 23, 0.25);
+
+  --header-h: 56px;
+  --measure: 1240px;
 }
 
-input[type="file"]::file-selector-button {
-  border: none;
-  background: #eef2ff;
-  color: #4338ca;
-  padding: 8px 14px;
-  border-radius: 8px;
-  margin-right: 12px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-}
-input[type="file"]::file-selector-button:hover {
-  background: #e0e7ff;
+/* main.js mobil menüyü ve sekmeleri bu sınıfla açıp kapatıyor.
+   Tailwind gidince de çalışsın diye burada tanımlı. */
+.hidden { display: none !important; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* --------------------------------------------------------------------------
+   Gövde
+   -------------------------------------------------------------------------- */
+
+body.app {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: var(--t-md);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Form elemanlarına Tailwind Forms benzeri temel görünüm (plugin yüklü değil) */
-input:not([type="checkbox"]):not([type="file"]),
-select,
-textarea {
-  border-width: 1px;
-  padding: 0.55rem 0.75rem;
-}
-input:focus, select:focus, textarea:focus {
+/* Bağlantı sıfırlaması :where() içinde — böylece spesifikliği sıfır olur ve
+   .btn-primary, .nav-link gibi kendi rengini veren sınıfları ezmez.
+   (.app a biçiminde yazılırsa buton rengini yenip koyu üstüne koyu yazdırır.) */
+:where(.app) a { color: inherit; text-decoration: none; }
+
+.app :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.25);
-  border-color: #6366f1;
+  border-radius: var(--r-1);
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent-ring);
+}
+
+.shell {
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0 var(--s-5);
+}
+
+.app-main { flex: 1; padding: var(--s-5) 0 var(--s-7); }
+
+/* Kısa sayfalarda içeriği dikey ortala. `margin-block: auto` kullanılıyor
+   çünkü align-items: center, içerik ekrandan uzun olduğunda üst tarafı
+   kırpar — bu yöntem kırpmaz, içerik büyüyünce kendiliğinden üste yaslanır. */
+.app-main--center { display: flex; flex-direction: column; }
+.app-main--center > .shell { margin-block: auto; width: 100%; }
+
+/* --------------------------------------------------------------------------
+   Üst başlık
+   -------------------------------------------------------------------------- */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+}
+
+.app-header > .shell {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+}
+
+/* Tipografik logo: ikon yok, aksan çubuğu + iki tonlu aralıklı metin */
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+.wordmark::before {
+  content: "";
+  width: 3px;
+  height: 15px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+.wordmark b {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+.wordmark span {
+  font-size: var(--t-sm);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  margin-left: auto;
+  font-size: var(--t-base);
+}
+
+/* Aktif sayfa renkli pill ile değil, altındaki çizgiyle işaretlenir */
+.nav-link {
+  position: relative;
+  padding: var(--s-1) 0;
+  color: var(--ink-2);
+  transition: color 0.12s;
+}
+.nav-link:hover { color: var(--ink); }
+.nav-link.is-active { color: var(--ink); font-weight: 500; }
+.nav-link.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -6px;
+  height: 2px;
+  background: var(--accent);
+}
+
+/* Avatar + ad sıkı bir ikili (kimsin); ÇIKIŞ ayrı bir eylem, bu yüzden
+   arasına belirgin boşluk girer. Üçü eşit aralıkla dizilirse ÇIKIŞ
+   kurum adının devamı gibi okunuyor. */
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--rule);
+}
+.app-user .nav-quiet { margin-left: var(--s-4); }
+.app-user-name {
+  font-size: var(--t-base);
+  color: var(--ink);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-quiet {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+.nav-quiet:hover { color: var(--danger); }
+
+.menu-toggle {
+  display: none;
+  margin-left: auto;
+  width: 32px; height: 32px;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.mobile-nav {
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+  padding: var(--s-3) 0;
+}
+.mobile-nav .shell { display: flex; flex-direction: column; gap: var(--s-1); }
+.mobile-nav a {
+  padding: var(--s-2) 0;
+  font-size: var(--t-md);
+  color: var(--ink-2);
+}
+.mobile-nav .mobile-nav-logout { padding-top: var(--s-3); }
+.mobile-nav .mobile-nav-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding-bottom: var(--s-3);
+  margin-bottom: var(--s-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* --------------------------------------------------------------------------
+   Vesikalık: daire değil, yuvarlak köşeli kare — CV'deki fotoğraf gibi
+   -------------------------------------------------------------------------- */
+
+.portrait {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  font-family: var(--mono);
+  font-weight: 500;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+.portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.portrait-sm { width: 26px; height: 26px; font-size: var(--t-micro); }
+.portrait-md { width: 34px; height: 34px; font-size: var(--t-xs); }
+
+/* --------------------------------------------------------------------------
+   Başlıklar
+   -------------------------------------------------------------------------- */
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--s-3);
+  margin-bottom: var(--s-4);
+  border-bottom: 1px solid var(--rule-2);
+}
+
+.page-title {
+  margin: 0;
+  font-size: var(--t-xl);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* Aralıklı küçük mono etiket — kurumsal register */
+.eyebrow {
+  display: block;
+  margin-bottom: var(--s-1);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.count {
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.count strong { color: var(--ink); font-weight: 500; }
+
+/* --------------------------------------------------------------------------
+   Panel
+   -------------------------------------------------------------------------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+}
+
+/* --------------------------------------------------------------------------
+   Açılış sayfası — sola dayalı editoryal giriş.
+   Ortalanmış kahraman başlık, pill rozet ve iki simetrik ikonlu kart yok;
+   iki rol numaralandırılmış belge satırları olarak sunulur.
+   -------------------------------------------------------------------------- */
+
+/* Metin sola dayalı kalır ama blok ortalanır — yoksa geniş ekranda
+   içerik sol kenara yapışıp sağda kocaman boşluk bırakıyor. */
+.hero { max-width: 760px; margin-inline: auto; padding: 0 0 var(--s-6); }
+
+.hero-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: var(--t-3xl);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.hero-text {
+  margin: var(--s-4) 0 0;
+  font-size: var(--t-lg);
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 54ch;
+}
+
+.gates { max-width: 760px; margin-inline: auto; }
+
+.gate {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: var(--s-4);
+  padding: var(--s-5) 0;
+  border-top: 1px solid var(--rule-2);
+}
+.gate:last-child { border-bottom: 1px solid var(--rule-2); }
+
+.gate-num {
+  font-family: var(--mono);
+  font-size: var(--t-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--rule-2);
+  line-height: 1.4;
+}
+
+.gate-label {
+  margin: 0 0 var(--s-2);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.gate-title {
+  margin: 0 0 var(--s-2);
+  font-family: var(--serif);
+  font-size: var(--t-xl);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.gate-text {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-md);
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 56ch;
+}
+
+.gate-links { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+
+@media (max-width: 560px) {
+  .hero-title { font-size: var(--t-2xl); }
+  .hero-text { font-size: var(--t-md); }
+  .gate { grid-template-columns: 1fr; gap: var(--s-2); }
+}
+
+/* --------------------------------------------------------------------------
+   Giriş / kayıt — dar, ortalanmış, kutu içinde değil.
+   Kart gölgesi yerine tek bir çizgi başlığı gövdeden ayırır.
+   -------------------------------------------------------------------------- */
+
+.auth { max-width: 372px; margin: 0 auto; }
+
+.auth-head {
+  padding-bottom: var(--s-4);
+  margin-bottom: var(--s-4);
+  border-bottom: 1px solid var(--rule-2);
+}
+
+.auth-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: var(--t-2xl);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.auth-text {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-md);
+  color: var(--ink-3);
+}
+
+.auth-foot {
+  margin: var(--s-4) 0 0;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+  font-size: var(--t-base);
+  color: var(--ink-3);
+}
+
+/* --------------------------------------------------------------------------
+   Form öğeleri
+   -------------------------------------------------------------------------- */
+
+.field { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+
+.label {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.input, .select {
+  width: 100%;
+  height: 34px;
+  padding: 0 var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--rule-2);
+  border-radius: var(--r-2);
+  font-family: var(--sans);
+  font-size: var(--t-base);
+  color: var(--ink);
+}
+.input::placeholder { color: var(--ink-3); }
+
+.input:focus, .select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.select {
+  appearance: none;
+  padding-right: 26px;
+  /* Tek fonksiyonel glif: açılır liste oku */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23857f73' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}
+
+.input-search { padding-left: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 13 13'%3E%3Ccircle cx='5.2' cy='5.2' r='4.1' fill='none' stroke='%23857f73' stroke-width='1.4'/%3E%3Cpath d='M8.4 8.4L12 12' stroke='%23857f73' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 9px center;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 76px;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--rule-2);
+  border-radius: var(--r-2);
+  font-family: var(--sans);
+  font-size: var(--t-base);
+  line-height: 1.55;
+  color: var(--ink);
+  resize: vertical;
+}
+.textarea::placeholder { color: var(--ink-3); }
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-base);
+  color: var(--ink-2);
+  cursor: pointer;
+  user-select: none;
+}
+.check input {
+  width: 14px; height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Araç dışındaki formlarda (giriş, kayıt, CV formu) daha rahat yükseklik */
+.input-lg, .select-lg { height: 44px; font-size: var(--t-md); }
+
+.field-hint { font-size: var(--t-xs); color: var(--ink-3); }
+
+.form-stack { display: flex; flex-direction: column; gap: var(--s-3); }
+
+/* --------------------------------------------------------------------------
+   Butonlar
+   -------------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  height: 34px;
+  padding: 0 var(--s-4);
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  font-family: var(--sans);
+  font-size: var(--t-base);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-2); }
+
+.btn-outline {
+  background: var(--surface);
+  border-color: var(--rule-2);
+  color: var(--ink-2);
+}
+.btn-outline:hover { background: var(--surface-2); color: var(--ink); }
+
+.btn-quiet { background: none; color: var(--ink-3); padding: 0 var(--s-2); }
+.btn-quiet:hover { background: var(--surface-2); color: var(--ink); }
+
+.btn-sm { height: 28px; padding: 0 var(--s-3); font-size: var(--t-sm); }
+.btn-lg { height: 44px; padding: 0 var(--s-5); font-size: var(--t-md); }
+.btn-block { width: 100%; }
+
+/* Tablo içi aksiyon: mono, aralıklı, çerçevesiz — satırı gürültüye boğmaz */
+.btn-cell {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background-color 0.12s;
+}
+.btn-cell:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* --------------------------------------------------------------------------
+   Filtre çubuğu
+   -------------------------------------------------------------------------- */
+
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+}
+.toolbar-grow { flex: 1 1 200px; min-width: 180px; }
+.toolbar-fixed { flex: 0 0 190px; }
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-left: auto;
+  padding-bottom: 1px;
+}
+/* Onay kutusu kendi satırında değil, alanların hizasında dursun */
+.toolbar .check { padding-bottom: var(--s-2); }
+
+/* ==========================================================================
+   CV FORMU — sekmeler, alan ızgarası, dinamik satırlar
+   ========================================================================== */
+
+/* Sekmeler: renkli dolgu yerine üst navigasyondaki gibi alt çizgi */
+.tabs {
+  display: flex;
+  gap: var(--s-6);
+  flex-wrap: wrap;
+  row-gap: var(--s-2);
+  /* Üstte başlık çizgisinden, altta panel içeriğinden ayrılsın */
+  margin: var(--s-5) 0 var(--s-6);
+  border-bottom: 1px solid var(--rule-2);
+}
+.tab {
+  position: relative;
+  padding: var(--s-2) 0 var(--s-3);
+  background: none;
+  border: none;
+  font-family: var(--sans);
+  font-size: var(--t-md);
+  color: var(--ink-3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--ink); }
+.tab.is-active { color: var(--ink); font-weight: 500; }
+.tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+}
+
+/* 12 kolonluk alan ızgarası */
+.formgrid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--s-4) var(--s-3);
+}
+.col-2  { grid-column: span 2; }
+.col-3  { grid-column: span 3; }
+.col-4  { grid-column: span 4; }
+.col-5  { grid-column: span 5; }
+.col-6  { grid-column: span 6; }
+.col-12 { grid-column: span 12; }
+
+/* Dinamik satırlar: gri kutu yerine çizgiyle ayrılmış kayıtlar.
+   Numara CSS sayacıyla üretilir — satır eklenip silindiğinde
+   kendiliğinden güncellenir, JavaScript gerekmez. */
+.rowlist { counter-reset: rowitem; }
+
+.rowitem {
+  counter-increment: rowitem;
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  gap: var(--s-3);
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--rule);
+}
+.rowitem::before {
+  content: counter(rowitem, decimal-leading-zero);
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--rule-2);
+  padding-top: 20px;   /* ilk alanın etiketiyle hizalansın */
+}
+
+.rowitem-remove {
+  align-self: start;
+  margin-top: 18px;
+  background: none;
+  border: none;
+  padding: var(--s-1) var(--s-2);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  cursor: pointer;
+  border-radius: var(--r-1);
+}
+.rowitem-remove:hover { color: var(--danger); background: var(--danger-soft); }
+
+.rowlist-add { margin-top: var(--s-4); }
+
+.rowlist-empty {
+  padding: var(--s-5) 0;
+  border-top: 1px solid var(--rule);
+  font-size: var(--t-base);
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  margin-top: var(--s-5);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule-2);
+}
+
+.file-note { font-size: var(--t-xs); color: var(--ok); }
+
+@media (max-width: 760px) {
+  .formgrid > * { grid-column: span 12; }
+  .rowitem { grid-template-columns: 1fr auto; }
+  .rowitem::before { grid-column: 1 / -1; padding-top: 0; }
+  .rowitem-remove { margin-top: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Veri tablosu — kurum tarafının çekirdeği
+   -------------------------------------------------------------------------- */
+
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  /* `clip`, `hidden` değil: ikisi de köşeleri kırpar, ama `hidden` bir
+     kaydırma konteyneri oluşturur ve içerideki position:sticky başlığı
+     sayfaya değil bu kutuya göre hizalar — başlık o zaman tablonun
+     tepesinden --header-h kadar aşağı itilip ilk satırın üstüne biner.
+     `clip` kaydırma konteyneri oluşturmaz, sticky sayfaya göre çalışır. */
+  overflow: clip;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-base);
+}
+
+.table thead th {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 10;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--rule-2);
+  box-shadow: var(--shadow);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table tbody td {
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--rule);
+  vertical-align: middle;
+  color: var(--ink-2);
+}
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:hover { background: var(--surface-2); }
+
+/* Sayısal kolonlar: sağa dayalı, mono, tabular figürler →
+   rakamlar kolon içinde birbirine hizalanır */
+.table .num {
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.table th.num { text-align: right; }
+.table .num-empty { color: var(--ink-3); }
+
+.col-actions { text-align: right; white-space: nowrap; }
+
+/* Sıralanabilir kolon başlığı */
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: inherit;
+}
+.sort:hover { color: var(--ink); }
+.sort-caret { font-size: 8px; color: var(--rule-2); }
+.sort.is-active { color: var(--accent); }
+.sort.is-active .sort-caret { color: var(--accent); }
+
+/* Aday hücresi */
+.who { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.who-text { min-width: 0; }
+.who-name, .who-mail {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.who-name {
+  font-size: var(--t-base);
+  font-weight: 500;
+  color: var(--ink);
+}
+.who-mail {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  color: var(--ink-3);
+}
+
+/* Metin içinde aksan rengli bağlantı */
+.link-accent { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.link-accent:hover { color: var(--accent-2); }
+
+/* Bölüm: renkli pill değil, aksan çizgili düz metin */
+.dept {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-base);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.dept::before {
+  content: "";
+  width: 2px;
+  height: 11px;
+  background: var(--rule-2);
+  flex-shrink: 0;
+}
+
+/* Var / yok durumu */
+.state {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.state-yes { color: var(--ok); }
+.state-no  { color: var(--ink-3); }
+
+/* Doluluk göstergesi: ince çubuk + mono yüzde */
+.meter { display: flex; align-items: center; gap: var(--s-2); justify-content: flex-end; }
+.meter-track {
+  width: 42px; height: 3px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.meter-fill { height: 100%; background: var(--ink-3); border-radius: 2px; }
+.meter-val {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  min-width: 30px;
+  text-align: right;
+}
+.meter.is-high .meter-fill { background: var(--ok); }
+.meter.is-mid  .meter-fill { background: var(--warn); }
+
+/* ==========================================================================
+   CV BELGESİ — hibrit dilin editoryal yarısı
+   --------------------------------------------------------------------------
+   Kurum tarafı yoğun bir araçtır; CV ise bir belgedir. Bu yüzden burada
+   düzen değişir: dört ayrı kart yerine tek bir kağıt yüzey, solda mono
+   tarih rayı, bölümler saç teli çizgilerle ayrılmış. Renkli ikon başlığı,
+   noktalı zaman çizelgesi ve pill rozet yok.
+   ========================================================================== */
+
+.docbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  max-width: 880px;
+  margin: 0 auto var(--s-4);
+}
+.docbar-actions { display: flex; gap: var(--s-2); margin-left: auto; }
+
+.backlink {
+  font-size: var(--t-base);
+  color: var(--ink-3);
+}
+.backlink:hover { color: var(--ink); }
+
+.notice {
+  max-width: 880px;
+  margin: 0 auto var(--s-4);
+  padding: var(--s-2) var(--s-3);
+  background: var(--accent-soft);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-1);
+  font-size: var(--t-base);
+  color: var(--accent);
+}
+
+/* Kağıt yüzey */
+.doc {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--s-7) var(--s-7) var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow);
+}
+
+/* --- Belge başlığı: ad + künye solda, vesikalık sağda --- */
+
+.doc-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-5);
+  padding-bottom: var(--s-5);
+  border-bottom: 2px solid var(--ink);
+}
+.doc-head-text { flex: 1; min-width: 0; }
+
+.doc-name {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: var(--t-3xl);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.doc-dept {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-md);
+  color: var(--ink-2);
+}
+
+/* İletişim: mono, orta nokta ile ayrılmış tek satır */
+.doc-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-3);
+  margin: var(--s-3) 0 0;
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+}
+.doc-contact span:not(:last-child)::after {
+  content: "·";
+  margin-left: var(--s-3);
+  color: var(--rule-2);
+}
+
+/* Vesikalık: dikdörtgen, basılı CV'deki gibi */
+.doc-portrait {
+  flex-shrink: 0;
+  width: 84px;
+  height: 104px;
+  border-radius: var(--r-2);
+  font-size: var(--t-lg);
+}
+
+/* --- Bölümler --- */
+
+.doc-section { padding-top: var(--s-5); }
+.doc-section + .doc-section { border-top: 1px solid var(--rule-2); margin-top: var(--s-5); }
+
+.doc-section-label {
+  margin: 0 0 var(--s-2);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.doc-text {
+  margin: 0;
+  font-size: var(--t-md);
+  line-height: 1.65;
+  color: var(--ink-2);
+  max-width: 68ch;
+}
+
+.doc-empty {
+  margin: 0;
+  font-size: var(--t-base);
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+/* --- Kayıt: solda tarih rayı, sağda içerik --- */
+
+.entry {
+  display: grid;
+  grid-template-columns: 104px 1fr;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.entry:last-child { border-bottom: none; padding-bottom: 0; }
+
+.entry-date {
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+  color: var(--ink-3);
+  padding-top: 1px;
+}
+
+.entry-body { min-width: 0; }
+
+.entry-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+/* Editoryal ses: kayıt başlıkları serif */
+.entry-title {
+  font-family: var(--serif);
+  font-size: var(--t-lg);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+/* Derece türü rozet değil, sessiz mono etiket */
+.entry-badge {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.entry-sub { font-size: var(--t-base); color: var(--ink-2); }
+.entry-meta {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.entry-text {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-base);
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 64ch;
+}
+
+.entry-link { color: var(--ink-3); font-size: var(--t-sm); margin-left: auto; }
+.entry-link:hover { color: var(--accent); }
+
+/* --- Öğrenci paneli: doluluk göstergesi, sayaçlar, durum satırı --- */
+
+/* Rakam ile not aynı taban çizgisinde, çubuk altta tam genişlikte */
+.gauge {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0 var(--s-3);
+}
+.gauge-track { grid-column: 1 / -1; }
+
+/* Sayfanın manşet rakamı */
+.gauge-num {
+  font-family: var(--serif);
+  font-size: var(--t-3xl);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.gauge-note { font-size: var(--t-base); color: var(--ink-3); }
+
+.gauge-track {
+  height: 4px;
+  margin-top: var(--s-3);
+  background: var(--surface-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.gauge-fill { height: 100%; background: var(--ink-3); border-radius: 2px; }
+.gauge.is-high .gauge-fill { background: var(--ok); }
+.gauge.is-mid  .gauge-fill { background: var(--warn); }
+
+/* Eksikler: amber pill değil, düz bir liste */
+.checklist { margin: var(--s-4) 0 0; padding: 0; list-style: none; }
+.checklist li {
+  display: flex;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--rule);
+  font-size: var(--t-base);
+  color: var(--ink-2);
+}
+.checklist li::before {
+  content: "—";
+  color: var(--warn);
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+.checklist-done {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-base);
+  color: var(--ok);
+}
+
+/* Sayaçlar: dört renkli ikon kartı yerine çizgiyle ayrılmış tek şerit */
+.stat-row { display: flex; flex-wrap: wrap; row-gap: var(--s-4); }
+.stat {
+  padding-right: var(--s-6);
+  margin-right: var(--s-6);
+  border-right: 1px solid var(--rule);
+}
+.stat:last-child { padding-right: 0; margin-right: 0; border-right: none; }
+.stat-num {
+  display: block;
+  font-family: var(--serif);
+  font-size: var(--t-xl);
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.stat-label {
+  display: block;
+  margin-top: var(--s-1);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Durum satırı: solda bilgi, sağda eylem */
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+.status-text { font-size: var(--t-md); color: var(--ink-2); }
+
+@media (max-width: 560px) {
+  .stat { padding-right: var(--s-4); margin-right: var(--s-4); }
+}
+
+/* Yetkinlik / teknoloji listesi: pill yok, orta nokta ile ayrılmış mono */
+.taglist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-2);
+  margin: var(--s-2) 0 0;
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+.taglist span:not(:last-child)::after {
+  content: "·";
+  margin-left: var(--s-2);
+  color: var(--rule-2);
+}
+
+.btn-disabled {
+  background: var(--surface-2);
+  border-color: var(--rule);
+  color: var(--ink-3);
+  cursor: default;
+}
+
+@media (max-width: 620px) {
+  .doc { padding: var(--s-5) var(--s-4); }
+  .doc-head { gap: var(--s-4); }
+  .doc-portrait { width: 64px; height: 80px; }
+  .doc-name { font-size: var(--t-2xl); }
+
+  /* Tarih rayı daralan ekranda içeriğin üstüne geçer */
+  .entry { grid-template-columns: 1fr; gap: var(--s-1); }
+  .docbar-actions { margin-left: 0; width: 100%; }
+  .docbar-actions .btn { flex: 1; }
+}
+
+/* --------------------------------------------------------------------------
+   Boş durum
+   -------------------------------------------------------------------------- */
+
+.empty {
+  padding: var(--s-7) var(--s-5);
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+}
+.empty-title { font-size: var(--t-md); color: var(--ink); margin: 0 0 var(--s-1); }
+.empty-text { font-size: var(--t-base); color: var(--ink-3); margin: 0; }
+
+/* --------------------------------------------------------------------------
+   Flash mesajları: sol aksan çubuğu, pill ve ikon yok
+   -------------------------------------------------------------------------- */
+
+.flash-stack { display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-4); }
+
+.flash {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink-3);
+  border-radius: var(--r-1);
+  background: var(--surface);
+  font-size: var(--t-base);
+  color: var(--ink-2);
+}
+.flash-error   { border-left-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+.flash-success { border-left-color: var(--ok); background: var(--ok-soft); color: var(--ok); }
+
+/* --------------------------------------------------------------------------
+   Alt bilgi
+   -------------------------------------------------------------------------- */
+
+.app-footer {
+  border-top: 1px solid var(--rule);
+  padding: var(--s-4) 0;
+}
+.app-footer .shell {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* --------------------------------------------------------------------------
+   Dosya seçici (eski indigo görünümü kaldırıldı)
+   -------------------------------------------------------------------------- */
+
+.app input[type="file"] { font-family: var(--sans); font-size: var(--t-base); color: var(--ink-2); }
+.app input[type="file"]::file-selector-button {
+  margin-right: var(--s-3);
+  padding: 6px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--rule-2);
+  border-radius: var(--r-2);
+  font-family: var(--sans);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.app input[type="file"]::file-selector-button:hover { background: var(--surface-3); }
+
+/* ==========================================================================
+   Duyarlılık
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .toolbar-fixed { flex: 1 1 150px; }
+}
+
+@media (max-width: 860px) {
+  .app-nav { display: none; }
+  .menu-toggle { display: inline-flex; }
+}
+
+/* Dar ekranda tablo satırları etiketli bloklara dönüşür.
+   Yatay kaydırma yok, JavaScript yok — kolon adı data-label'dan gelir. */
+@media (max-width: 760px) {
+  .table-wrap { background: none; border: none; border-radius: 0; overflow: visible; }
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+
+  .table tbody tr {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-2);
+    margin-bottom: var(--s-3);
+    padding: var(--s-3);
+  }
+  .table tbody tr:hover { background: var(--surface); }
+
+  .table tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-1) 0;
+    border-bottom: none;
+  }
+  .table tbody td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: var(--t-micro);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* Aday hücresi kartın başlığı olur */
+  .table tbody td.cell-who {
+    display: block;
+    padding: 0 0 var(--s-3);
+    margin-bottom: var(--s-2);
+    border-bottom: 1px solid var(--rule);
+  }
+  .table .num { text-align: right; }
+  .table tbody td.col-actions {
+    justify-content: flex-start;
+    gap: var(--s-2);
+    padding-top: var(--s-3);
+    margin-top: var(--s-2);
+    border-top: 1px solid var(--rule);
+  }
+  .table tbody td.col-actions::before { content: none; }
+  .meter { justify-content: flex-end; }
+}
+
+@media (max-width: 560px) {
+  .shell { padding: 0 var(--s-4); }
+  .toolbar-actions { margin-left: 0; width: 100%; }
+  .toolbar-actions .btn { flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app *, .app *::before, .app *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
