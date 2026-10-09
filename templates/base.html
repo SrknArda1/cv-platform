@@ -58,27 +58,48 @@
   </div>
 </header>
 
-<div id="mobile-menu" class="mobile-nav hidden">
-  <div class="shell">
+<div id="mobile-backdrop" class="drawer-backdrop"></div>
+
+<aside id="mobile-menu" class="drawer" aria-label="Menü">
+  <div class="drawer-top">
     {% if current_user.is_authenticated %}
-      <div class="mobile-nav-head">
+      <span class="drawer-who">
         <span class="portrait portrait-sm">{{ current_user.initials }}</span>
-        <span class="app-user-name">{{ current_user.full_name or current_user.company_name }}</span>
-      </div>
+        <span class="drawer-who-name">{{ current_user.full_name or current_user.company_name }}</span>
+      </span>
+    {% else %}
+      <span class="drawer-label">Menü</span>
+    {% endif %}
+    <button id="mobile-menu-close" class="drawer-close" type="button" aria-label="Menüyü kapat">&times;</button>
+  </div>
+
+  <nav class="drawer-nav">
+    {% if current_user.is_authenticated %}
       {% if current_user.role == 'student' %}
-        <a href="{{ url_for('student_dashboard') }}">Panelim</a>
-        <a href="{{ url_for('student_cv_form') }}">CV'mi Düzenle</a>
-        <a href="{{ url_for('student_preview') }}">Önizleme</a>
+        <a href="{{ url_for('student_dashboard') }}"
+           class="{{ 'is-active' if request.endpoint == 'student_dashboard' }}">Panelim</a>
+        <a href="{{ url_for('student_cv_form') }}"
+           class="{{ 'is-active' if request.endpoint == 'student_cv_form' }}">CV'mi Düzenle</a>
+        <a href="{{ url_for('student_preview') }}"
+           class="{{ 'is-active' if request.endpoint == 'student_preview' }}">Önizleme</a>
       {% else %}
-        <a href="{{ url_for('company_dashboard') }}">Aday Havuzu</a>
+        <a href="{{ url_for('company_dashboard') }}"
+           class="{{ 'is-active' if request.endpoint in ['company_dashboard', 'student_detail'] }}">Aday Havuzu</a>
       {% endif %}
-      <a href="{{ url_for('logout') }}" class="nav-quiet mobile-nav-logout">ÇIKIŞ YAP</a>
     {% else %}
       <a href="{{ url_for('student_login') }}">Öğrenci Girişi</a>
       <a href="{{ url_for('company_login') }}">Kurum Girişi</a>
+      <a href="{{ url_for('student_register') }}">Öğrenci Kaydı</a>
+      <a href="{{ url_for('company_register') }}">Kurum Kaydı</a>
     {% endif %}
-  </div>
-</div>
+  </nav>
+
+  {% if current_user.is_authenticated %}
+    <div class="drawer-foot">
+      <a class="btn btn-outline btn-block" href="{{ url_for('logout') }}">Çıkış yap</a>
+    </div>
+  {% endif %}
+</aside>
 
 {# Kısa sayfalar (giriş, kayıt, açılış) main_class bloğuna "app-main--center"
    yazarak içeriği dikey ortalar; uzun sayfalar üstten hizalı kalır. #}

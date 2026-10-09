@@ -150,7 +150,15 @@ def index():
 
 
 @app.route("/uploads/photos/<filename>")
+@login_required
 def uploaded_photo(filename):
+    """Profil fotografi.
+
+    login_required sart: dosya adi photo_<kullanici_id>_<zaman>.png
+    bicimindedir, yani tahmin edilebilir. Koruma olmadan adresi bilen
+    herkes ogrencilerin fotografini indirebiliyordu. Fotograf zaten
+    yalnizca girisli sayfalarda gosteriliyor, bu yuzden bir sey bozulmaz.
+    """
     return send_from_directory(app.config["PHOTO_FOLDER"], filename)
 
 
@@ -532,7 +540,20 @@ def create_app():
 
 if __name__ == "__main__":
     create_app()
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Debug modu disa acik bir adreste ASLA acik olmamali: hata aninda
+    # tarayicida interaktif Python konsolu acilir, yani sunucuda kod
+    # calistirilabilir. Yerel gelistirmede varsayilan olarak acik kalir;
+    # tunel/sunucu icin FLASK_DEBUG=0 verilir.
+    debug = os.environ.get("FLASK_DEBUG", "1") != "0"
+    port = int(os.environ.get("PORT", 5000))
+
+    if not debug and app.config["SECRET_KEY"] == "dev-secret-anahtari-degistir":
+        raise SystemExit(
+            "SECRET_KEY ayarlanmamis. Disa acik calistirmadan once ortam "
+            "degiskeni olarak guclu ve rastgele bir deger verin."
+        )
+
+    app.run(debug=debug, host="0.0.0.0", port=port)
     
 @app.cli.command("approve-company")
 def approve_company():

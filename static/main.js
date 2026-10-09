@@ -8,12 +8,37 @@ document.addEventListener("DOMContentLoaded", () => {
 function initMobileMenu() {
   const btn = document.getElementById("mobile-menu-btn");
   const menu = document.getElementById("mobile-menu");
-  if (!btn || !menu) return;
+  const backdrop = document.getElementById("mobile-backdrop");
+  const closeBtn = document.getElementById("mobile-menu-close");
+  if (!btn || !menu || !backdrop) return;
 
-  btn.addEventListener("click", () => {
-    // toggle(), sınıf eklendiğinde true döner — yani menü gizlenmiş demektir
-    const isHidden = menu.classList.toggle("hidden");
-    btn.setAttribute("aria-expanded", String(!isHidden));
+  function setOpen(open) {
+    menu.classList.toggle("is-open", open);
+    backdrop.classList.toggle("is-open", open);
+    btn.setAttribute("aria-expanded", String(open));
+
+    // Çekmece açıkken arkadaki sayfa kaymasın
+    document.body.style.overflow = open ? "hidden" : "";
+
+    // Açılınca odağı çekmecenin içine al, kapanınca butona geri ver
+    if (open) {
+      (closeBtn || menu.querySelector("a") || menu).focus();
+    } else {
+      btn.focus();
+    }
+  }
+
+  btn.addEventListener("click", () => setOpen(!menu.classList.contains("is-open")));
+  backdrop.addEventListener("click", () => setOpen(false));
+  if (closeBtn) closeBtn.addEventListener("click", () => setOpen(false));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && menu.classList.contains("is-open")) setOpen(false);
+  });
+
+  // Pencere masaüstü genişliğine çıkarsa çekmece açık kalmasın
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 860 && menu.classList.contains("is-open")) setOpen(false);
   });
 }
 

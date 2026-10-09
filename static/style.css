@@ -194,6 +194,8 @@ body.app {
   background: var(--accent);
   border-radius: 1px;
 }
+.wordmark:hover b { color: var(--accent); }
+
 .wordmark b {
   font-size: var(--t-sm);
   font-weight: 600;
@@ -223,6 +225,14 @@ body.app {
   transition: color 0.12s;
 }
 .nav-link:hover { color: var(--ink); }
+.nav-link:hover::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -6px;
+  height: 2px;
+  background: var(--rule-2);
+}
+.nav-link.is-active:hover::after { background: var(--accent); }
 .nav-link.is-active { color: var(--ink); font-weight: 500; }
 .nav-link.is-active::after {
   content: "";
@@ -258,7 +268,9 @@ body.app {
   letter-spacing: 0.04em;
   color: var(--ink-3);
 }
-.nav-quiet:hover { color: var(--danger); }
+.nav-quiet:hover { color: var(--danger); text-decoration: underline; text-underline-offset: 2px; }
+
+.menu-toggle:hover { background: var(--surface-2); border-color: var(--rule-2); color: var(--ink); }
 
 .menu-toggle {
   display: none;
@@ -273,25 +285,114 @@ body.app {
   cursor: pointer;
 }
 
-.mobile-nav {
-  border-top: 1px solid var(--rule);
+/* --------------------------------------------------------------------------
+   Mobil çekmece (drawer)
+
+   Üstten açılan panel yerine sağdan kayan yan menü: açıldığı belli olsun
+   ve arkadaki sayfa karartmayla geri çekilsin. Kapalıyken `display:none`
+   yerine ekran dışına ötelenir — böylece kayma animasyonu çalışır.
+   `visibility: hidden` kapalıyken Tab ile içine girilmesini engeller.
+   -------------------------------------------------------------------------- */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(26, 25, 23, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease, visibility 0.22s;
+}
+.drawer-backdrop.is-open { opacity: 1; visibility: visible; }
+
+.drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  z-index: 60;
+  width: min(320px, 86vw);
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
-  padding: var(--s-3) 0;
+  border-left: 1px solid var(--rule);
+  box-shadow: var(--shadow);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform 0.22s ease, visibility 0.22s;
+  /* Telefon çentiği / alt çubuk için güvenli alan payı */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.mobile-nav .shell { display: flex; flex-direction: column; gap: var(--s-1); }
-.mobile-nav a {
-  padding: var(--s-2) 0;
-  font-size: var(--t-md);
-  color: var(--ink-2);
-}
-.mobile-nav .mobile-nav-logout { padding-top: var(--s-3); }
-.mobile-nav .mobile-nav-head {
+.drawer.is-open { transform: translateX(0); visibility: visible; }
+
+.drawer-top {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
-  padding-bottom: var(--s-3);
-  margin-bottom: var(--s-2);
+  gap: var(--s-3);
+  min-height: var(--header-h);
+  padding: var(--s-3) var(--s-4);
   border-bottom: 1px solid var(--rule);
+}
+.drawer-who { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.drawer-who-name {
+  font-size: var(--t-base);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drawer-label {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.drawer-close {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  color: var(--ink-2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.drawer-close:hover { background: var(--surface-2); border-color: var(--ink-3); color: var(--ink); }
+
+/* Gezinme bağlantıları: her biri kendi satırı, aralarında ince çizgi */
+.drawer-nav { display: flex; flex-direction: column; padding: var(--s-2) 0; }
+.drawer-nav a {
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--t-md);
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--rule);
+}
+.drawer-nav a:last-child { border-bottom: none; }
+.drawer-nav a:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--rule-2);
+}
+.drawer-nav a.is-active { color: var(--ink); font-weight: 500; box-shadow: inset 3px 0 0 var(--accent); }
+.drawer-nav a.is-active:hover { background: var(--accent-soft); }
+
+/* Çıkış en altta, gezinmeden ayrı */
+.drawer-foot {
+  margin-top: auto;
+  padding: var(--s-4);
+  border-top: 1px solid var(--rule-2);
+}
+
+/* Masaüstünde çekmece hiç yok */
+@media (min-width: 861px) {
+  .drawer, .drawer-backdrop { display: none; }
 }
 
 /* --------------------------------------------------------------------------
@@ -558,6 +659,8 @@ body.app {
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
+.check:hover { color: var(--ink); }
+
 .check {
   display: inline-flex;
   align-items: center;
@@ -611,10 +714,10 @@ body.app {
   border-color: var(--rule-2);
   color: var(--ink-2);
 }
-.btn-outline:hover { background: var(--surface-2); color: var(--ink); }
+.btn-outline:hover { background: var(--surface-2); border-color: var(--ink-3); color: var(--ink); }
 
 .btn-quiet { background: none; color: var(--ink-3); padding: 0 var(--s-2); }
-.btn-quiet:hover { background: var(--surface-2); color: var(--ink); }
+.btn-quiet:hover { background: var(--surface-3); color: var(--ink); }
 
 .btn-sm { height: 28px; padding: 0 var(--s-3); font-size: var(--t-sm); }
 .btn-lg { height: 44px; padding: 0 var(--s-5); font-size: var(--t-md); }
@@ -703,6 +806,14 @@ body.app {
   white-space: nowrap;
 }
 .tab:hover { color: var(--ink); }
+.tab:hover::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--rule-2);
+}
+.tab.is-active:hover::after { background: var(--accent); }
 .tab.is-active { color: var(--ink); font-weight: 500; }
 .tab.is-active::after {
   content: "";
@@ -841,6 +952,9 @@ body.app {
 }
 .table tbody tr:last-child td { border-bottom: none; }
 .table tbody tr:hover { background: var(--surface-2); }
+/* Solda ince mavi kenar: uzun listede hangi satirda oldugunu belli eder.
+   tr uzerinde box-shadow guvenilir degil, ilk hucreye veriliyor. */
+.table tbody tr:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
 /* Sayısal kolonlar: sağa dayalı, mono, tabular figürler →
    rakamlar kolon içinde birbirine hizalanır */
@@ -862,7 +976,7 @@ body.app {
   gap: 5px;
   color: inherit;
 }
-.sort:hover { color: var(--ink); }
+.sort:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .sort-caret { font-size: 8px; color: var(--rule-2); }
 .sort.is-active { color: var(--accent); }
 .sort.is-active .sort-caret { color: var(--accent); }
@@ -917,6 +1031,7 @@ body.app {
   white-space: nowrap;
 }
 .state-yes { color: var(--ok); }
+a.state-yes:hover { text-decoration: underline; text-underline-offset: 2px; }
 .state-no  { color: var(--ink-3); }
 
 /* Doluluk göstergesi: ince çubuk + mono yüzde */
@@ -963,7 +1078,7 @@ body.app {
   font-size: var(--t-base);
   color: var(--ink-3);
 }
-.backlink:hover { color: var(--ink); }
+.backlink:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 
 .notice {
   max-width: 880px;
@@ -1134,7 +1249,7 @@ body.app {
 }
 
 .entry-link { color: var(--ink-3); font-size: var(--t-sm); margin-left: auto; }
-.entry-link:hover { color: var(--accent); }
+.entry-link:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 
 /* --- Öğrenci paneli: doluluk göstergesi, sayaçlar, durum satırı --- */
 
