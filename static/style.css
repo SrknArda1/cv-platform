@@ -1,6 +1,41 @@
 /* ==========================================================================
    Kariyer Portalı — tasarım sistemi
    --------------------------------------------------------------------------
+   İÇİNDEKİLER  (satır numaraları değişebilir; aramak için başlıkları kullanın)
+
+     TOKEN'LAR ............... :root — renk, tipografi, boşluk, yarıçap
+       Yüzeyler / Çizgiler / Mürekkep / Aksan / Anlamsal renkler
+       Tipografi ölçeği (--t-*)  ·  Boşluk (--s-*)  ·  Yarıçap (--r-*)
+
+     KABUK
+       Gövde  ·  Üst başlık  ·  Vesikalık  ·  Başlıklar  ·  Panel
+       Flash mesajları  ·  Alt bilgi  ·  İçeriğe atlama bağlantısı
+
+     SAYFA DÜZENLERİ
+       Açılış sayfası (.hero, .gate*)
+       Giriş / kayıt   (.auth*)
+       Boş durum       (.empty*)
+
+     FORM KATMANI
+       Form öğeleri (.input, .select, .textarea, .check, .label)
+       Butonlar     (.btn + varyantlar)
+       CV formu     (.tabs, .formgrid, .col-*, .rowlist, .rowitem)
+
+     KURUM TARAFI — YOĞUN ARAÇ
+       Filtre çubuğu (.toolbar*)
+       Veri tablosu  (.table, .sort, .who, .dept, .state, .meter)
+       Sayfalama     (.pager*)
+
+     ÖĞRENCİ TARAFI — EDİTORYAL
+       CV belgesi    (.doc*, .entry*, .taglist)
+       Panel         (.gauge*, .stat*, .checklist, .status-row)
+
+     EN SONDA
+       Duyarlılık (medya sorguları)  ·  Yazdırma  ·  Azaltılmış hareket
+
+   Bileşen önekleri ve tasarım kararlarının gerekçesi için README.md içindeki
+   "Tasarım sistemi" bölümüne bakın.
+   --------------------------------------------------------------------------
    Tek bir süperfamilya (IBM Plex) iki register'da kullanılır:
      Sans  → arayüz metni
      Mono  → sayılar, kolon başlıkları, kod benzeri meta (tabular figürler)
@@ -631,6 +666,17 @@ body.app {
 /* Onay kutusu kendi satırında değil, alanların hizasında dursun */
 .toolbar .check { padding-bottom: var(--s-2); }
 
+/* Sıralama denetimi yalnızca dar ekranda görünür: masaüstünde sıralama
+   kolon başlıklarından yapılır, ama dar ekranda tablo başlığı tamamen
+   kalktığı için oradaki bağlantılar da kayboluyor. Gizliyken bile form
+   içinde olduğu için aktif sıralamayı taşımaya devam eder. */
+.toolbar-sort { display: none; }
+
+@media (max-width: 760px) {
+  .toolbar-sort { display: flex; gap: var(--s-3); flex: 1 1 100%; }
+  .toolbar-sort .field { flex: 1; min-width: 0; }
+}
+
 /* ==========================================================================
    CV FORMU — sekmeler, alan ızgarası, dinamik satırlar
    ========================================================================== */
@@ -1259,19 +1305,113 @@ body.app {
    -------------------------------------------------------------------------- */
 
 .app-footer {
-  border-top: 1px solid var(--rule);
-  padding: var(--s-4) 0;
+  margin-top: var(--s-7);
+  border-top: 1px solid var(--rule-2);
+  padding: var(--s-6) 0 var(--s-4);
+  background: var(--surface);
 }
-.app-footer .shell {
+.app-footer > .shell {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+.footer-col { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
+
+.footer-mark {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+}
+
+.footer-head {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.footer-text {
+  margin: 0;
+  font-size: var(--t-base);
+  line-height: 1.55;
+  color: var(--ink-3);
+  max-width: 44ch;
+}
+
+.footer-col a {
+  font-size: var(--t-base);
+  color: var(--ink-2);
+}
+.footer-col a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.footer-base {
   display: flex;
   justify-content: space-between;
   gap: var(--s-3);
   flex-wrap: wrap;
+  margin-top: var(--s-5);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
   font-family: var(--mono);
   font-size: var(--t-micro);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--ink-3);
+}
+
+@media (max-width: 700px) {
+  .app-footer > .shell { grid-template-columns: 1fr; gap: var(--s-5); }
+}
+
+/* --------------------------------------------------------------------------
+   Klavye kullanıcısı için içeriğe atlama bağlantısı.
+   Normalde görünmez; Tab'a basıldığında ekranın üstünde belirir.
+   -------------------------------------------------------------------------- */
+
+.skip-link {
+  position: absolute;
+  left: var(--s-3);
+  top: -60px;
+  z-index: 100;
+  padding: var(--s-2) var(--s-3);
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--r-2);
+  font-size: var(--t-base);
+  transition: top 0.15s;
+}
+.skip-link:focus { top: var(--s-3); }
+
+/* --------------------------------------------------------------------------
+   Sayfalama
+   -------------------------------------------------------------------------- */
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin-top: var(--s-4);
+}
+.pager-info {
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.pager-links { display: flex; align-items: center; gap: var(--s-2); }
+.pager-current {
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  padding: 0 var(--s-2);
 }
 
 /* --------------------------------------------------------------------------
@@ -1364,6 +1504,52 @@ body.app {
   .shell { padding: 0 var(--s-4); }
   .toolbar-actions { margin-left: 0; width: 100%; }
   .toolbar-actions .btn { flex: 1; }
+}
+
+/* ==========================================================================
+   Yazdırma — CV belgesi kağıda temiz çıksın
+   --------------------------------------------------------------------------
+   Üst bar, alt bilgi, butonlar ve gezinme kâğıda basılmaz. Belge yüzeyi
+   çerçevesiz ve tam genişlikte olur, kayıtların ortasından sayfa bölünmez.
+   ========================================================================== */
+
+@media print {
+  @page { margin: 16mm; }
+
+  .app-header,
+  .app-footer,
+  .docbar,
+  .skip-link,
+  .mobile-nav,
+  .notice,
+  .flash-stack,
+  .tabs,
+  .form-actions,
+  .pager,
+  .toolbar { display: none !important; }
+
+  body.app { background: #fff; color: #000; font-size: 11pt; }
+  .app-main { padding: 0; }
+  .shell { max-width: none; padding: 0; }
+
+  .doc {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Bir kayıt ya da bölüm başlığı sayfa sonunda ikiye bölünmesin */
+  .entry, .doc-section { break-inside: avoid; }
+  .doc-section-label { break-after: avoid; }
+
+  /* Bağlantının nereye gittiği kâğıtta görünmez; adresi yanına yaz */
+  .entry-link::after { content: " (" attr(href) ")"; font-size: 9pt; }
+
+  .table { font-size: 9pt; }
+  .table thead th { position: static; box-shadow: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

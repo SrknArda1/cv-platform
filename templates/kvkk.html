@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Kişisel Verilerin Korunması — Kariyer Portalı{% endblock %}
+
+{% block content %}
+<div class="docbar">
+  <a class="backlink" href="{{ url_for('index') }}">&larr; Ana sayfa</a>
+</div>
+
+<article class="doc">
+  <header class="doc-head">
+    <div class="doc-head-text">
+      <h1 class="doc-name">Kişisel verilerin korunması</h1>
+      <p class="doc-dept">Bu platformda hangi verilerin tutulduğu ve kimlerin görebildiği.</p>
+    </div>
+  </header>
+
+  <p class="notice">
+    <strong>Bu sayfa tamamlanmamıştır.</strong> Aşağıdaki döküm, sistemin teknik olarak
+    ne sakladığını gösterir; KVKK aydınlatma metninin kendisi değildir. Resmi metnin
+    kurumun ilgili birimi tarafından yazılıp buraya konulması gerekir.
+  </p>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Öğrenciden toplanan veriler</h2>
+    <ul class="checklist">
+      <li>Ad soyad, e-posta adresi, telefon numarası</li>
+      <li>Bölüm bilgisi ve kısa profesyonel özet</li>
+      <li>Profil fotoğrafı</li>
+      <li>Transkript belgesi (PDF, JPG veya PNG)</li>
+      <li>Eğitim geçmişi: okul, bölüm, not ortalaması, yıllar</li>
+      <li>Deneyim kayıtları: şirket, pozisyon, tarihler, açıklama</li>
+      <li>Sertifika ve proje kayıtları</li>
+      <li>Yetkinlik listesi</li>
+    </ul>
+  </section>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Bu verileri kimler görebilir</h2>
+    <p class="doc-text">
+      Kampüs koordinatörü tarafından <strong>onaylanmış</strong> kurum hesapları, aday
+      havuzundaki tüm öğrencilerin CV'sini ve yüklenmiş transkriptini görüntüleyebilir.
+      Onaylanmamış kurum hesapları giriş yapamaz. Öğrenciler yalnızca kendi kayıtlarına
+      erişir; başka bir öğrencinin bilgisini göremez.
+    </p>
+  </section>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Kurumun doldurması gerekenler</h2>
+    <ul class="checklist">
+      <li>Veri sorumlusunun kimliği ve iletişim bilgileri</li>
+      <li>Verilerin işlenme amacı ve hukuki sebebi</li>
+      <li>Saklama süresi ve silme koşulları</li>
+      <li>Üçüncü taraflara aktarım olup olmadığı</li>
+      <li>İlgili kişinin KVKK 11. madde kapsamındaki hakları ve başvuru yolu</li>
+    </ul>
+  </section>
+</article>
+{% endblock %}

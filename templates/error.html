@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}{{ code }} — {{ title }}{% endblock %}
+{% block main_class %}app-main--center{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <header class="auth-head">
+    <span class="eyebrow">Hata {{ code }}</span>
+    <h1 class="auth-title">{{ title }}</h1>
+    <p class="auth-text">{{ text }}</p>
+  </header>
+
+  <div class="gate-links">
+    {% if current_user.is_authenticated %}
+      {% if current_user.role == 'student' %}
+        <a class="btn btn-primary btn-lg" href="{{ url_for('student_dashboard') }}">Panelime dön</a>
+      {% else %}
+        <a class="btn btn-primary btn-lg" href="{{ url_for('company_dashboard') }}">Aday havuzuna dön</a>
+      {% endif %}
+    {% else %}
+      <a class="btn btn-primary btn-lg" href="{{ url_for('index') }}">Ana sayfaya dön</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -87,6 +87,59 @@ def seed_departments():
 
 # ---------- Genel sayfalar ve Medya ----------
 
+@app.context_processor
+def inject_globals():
+    """Her sablonda kullanilabilen degerler (footer telif yili gibi)."""
+    return {"now_year": datetime.now().year}
+
+
+# ---------- Hata sayfalari ----------
+# Varsayilan Flask sayfalari stilsiz geliyor; tasarim sistemiyle ayni
+# kabukta gosterilsinler diye tek bir sablona baglandilar.
+
+def _error_page(code, title, text):
+    return render_template("error.html", code=code, title=title, text=text), code
+
+
+@app.errorhandler(403)
+def error_forbidden(e):
+    return _error_page(
+        403, "Bu sayfaya erişiminiz yok",
+        "Bu bölüm başka bir hesap türü için. Öğrenci hesabıyla kurum sayfalarına "
+        "(veya tersi) girilemez.",
+    )
+
+
+@app.errorhandler(404)
+def error_not_found(e):
+    return _error_page(
+        404, "Sayfa bulunamadı",
+        "Aradığınız adres değişmiş ya da hiç var olmamış olabilir.",
+    )
+
+
+@app.errorhandler(413)
+def error_too_large(e):
+    return _error_page(
+        413, "Dosya çok büyük",
+        "Yüklediğiniz dosya 10 MB sınırını aşıyor. Daha küçük bir dosya seçip "
+        "tekrar deneyin.",
+    )
+
+
+@app.errorhandler(500)
+def error_server(e):
+    return _error_page(
+        500, "Bir şeyler ters gitti",
+        "Sunucuda beklenmedik bir hata oluştu. Lütfen biraz sonra tekrar deneyin.",
+    )
+
+
+@app.route("/kvkk")
+def kvkk():
+    return render_template("kvkk.html")
+
+
 @app.route("/")
 def index():
     if current_user.is_authenticated:
@@ -306,7 +359,11 @@ CANDIDATE_SORTERS = {
     "certificate": (lambda s: len(s.certificates), lambda s: False),
     "transcript":  (lambda s: bool(s.transcript_filename), lambda s: False),
     "completion":  (lambda s: s.profile_completion(), lambda s: False),
+    "created":     (lambda s: s.created_at or datetime.min, lambda s: s.created_at is None),
 }
+
+# Aday havuzunda sayfa basina kayit sayisi
+CANDIDATES_PER_PAGE = 25
 
 
 @app.route("/company/dashboard")
@@ -356,6 +413,18 @@ def company_dashboard():
     students.sort(key=value_of, reverse=(direction == "desc"))
     students.sort(key=is_missing)
 
+    # Sayfalama: siralama Python tarafinda yapildigi icin dilimleme de burada.
+    # Istenen sayfa aralik disindaysa son sayfaya kirpilir, hata vermez.
+    match_count = len(students)
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except ValueError:
+        page = 1
+    page_count = max(1, -(-match_count // CANDIDATES_PER_PAGE))
+    page = min(page, page_count)
+    start = (page - 1) * CANDIDATES_PER_PAGE
+    students = students[start:start + CANDIDATES_PER_PAGE]
+
     departments = Department.query.order_by(Department.name).all()
 
     return render_template(
@@ -369,6 +438,11 @@ def company_dashboard():
         sort=sort,
         direction=direction,
         total_students=total_students,
+        match_count=match_count,
+        page=page,
+        page_count=page_count,
+        range_start=start + 1 if match_count else 0,
+        range_end=start + len(students),
     )
 
 

@@ -133,18 +133,18 @@
     </div>
   </header>
 
-  <form method="POST" enctype="multipart/form-data">
+  <form method="POST" enctype="multipart/form-data" data-guard-unsaved>
 
     <div class="tabs" role="tablist">
-      <button class="tab is-active" type="button" role="tab" aria-selected="true" data-tab-target="genel">Genel bilgiler</button>
-      <button class="tab" type="button" role="tab" aria-selected="false" data-tab-target="egitim">Eğitim</button>
-      <button class="tab" type="button" role="tab" aria-selected="false" data-tab-target="deneyim">Deneyim</button>
-      <button class="tab" type="button" role="tab" aria-selected="false" data-tab-target="sertifika">Sertifikalar</button>
-      <button class="tab" type="button" role="tab" aria-selected="false" data-tab-target="proje">Projeler</button>
+      <button class="tab is-active" type="button" role="tab" aria-selected="true" id="tab-genel" aria-controls="panel-genel" data-tab-target="genel">Genel bilgiler</button>
+      <button class="tab" type="button" role="tab" aria-selected="false" id="tab-egitim" aria-controls="panel-egitim" data-tab-target="egitim">Eğitim</button>
+      <button class="tab" type="button" role="tab" aria-selected="false" id="tab-deneyim" aria-controls="panel-deneyim" data-tab-target="deneyim">Deneyim</button>
+      <button class="tab" type="button" role="tab" aria-selected="false" id="tab-sertifika" aria-controls="panel-sertifika" data-tab-target="sertifika">Sertifikalar</button>
+      <button class="tab" type="button" role="tab" aria-selected="false" id="tab-proje" aria-controls="panel-proje" data-tab-target="proje">Projeler</button>
     </div>
 
     {# ---------- Genel bilgiler ---------- #}
-    <div data-tab-panel="genel">
+    <div id="panel-genel" role="tabpanel" aria-labelledby="tab-genel" data-tab-panel="genel">
       <div class="formgrid">
         <div class="field col-6">
           <label class="label" for="full_name">Ad soyad</label>
@@ -200,38 +200,38 @@
     </div>
 
     {# ---------- Eğitim ---------- #}
-    <div data-tab-panel="egitim" class="hidden">
+    <div id="panel-egitim" role="tabpanel" aria-labelledby="tab-egitim" data-tab-panel="egitim" class="hidden">
       <div class="rowlist" id="edu-rows">
         {% for edu in student.educations %}{{ edu_row(edu) }}{% endfor %}
       </div>
-      <button class="btn btn-outline" type="button" data-row-add="edu-rows" data-row-template="edu-row-template rowlist-add">+ Eğitim ekle</button>
+      <button class="btn btn-outline rowlist-add" type="button" data-row-add="edu-rows" data-row-template="edu-row-template">+ Eğitim ekle</button>
       <template id="edu-row-template">{{ edu_row(namespace(degree_type='Lisans', school='', department='', gpa='', start_year='', end_year='')) }}</template>
     </div>
 
     {# ---------- Deneyim ---------- #}
-    <div data-tab-panel="deneyim" class="hidden">
+    <div id="panel-deneyim" role="tabpanel" aria-labelledby="tab-deneyim" data-tab-panel="deneyim" class="hidden">
       <div class="rowlist" id="exp-rows">
         {% for exp in student.experiences %}{{ exp_row(exp) }}{% endfor %}
       </div>
-      <button class="btn btn-outline" type="button" data-row-add="exp-rows" data-row-template="exp-row-template rowlist-add">+ Deneyim ekle</button>
+      <button class="btn btn-outline rowlist-add" type="button" data-row-add="exp-rows" data-row-template="exp-row-template">+ Deneyim ekle</button>
       <template id="exp-row-template">{{ exp_row(namespace(company='', position='', start_date='', end_date='', description='')) }}</template>
     </div>
 
     {# ---------- Sertifikalar ---------- #}
-    <div data-tab-panel="sertifika" class="hidden">
+    <div id="panel-sertifika" role="tabpanel" aria-labelledby="tab-sertifika" data-tab-panel="sertifika" class="hidden">
       <div class="rowlist" id="cert-rows">
         {% for cert in student.certificates %}{{ cert_row(cert) }}{% endfor %}
       </div>
-      <button class="btn btn-outline" type="button" data-row-add="cert-rows" data-row-template="cert-row-template rowlist-add">+ Sertifika ekle</button>
+      <button class="btn btn-outline rowlist-add" type="button" data-row-add="cert-rows" data-row-template="cert-row-template">+ Sertifika ekle</button>
       <template id="cert-row-template">{{ cert_row(namespace(name='', institution='', date='')) }}</template>
     </div>
 
     {# ---------- Projeler ---------- #}
-    <div data-tab-panel="proje" class="hidden">
+    <div id="panel-proje" role="tabpanel" aria-labelledby="tab-proje" data-tab-panel="proje" class="hidden">
       <div class="rowlist" id="proj-rows">
         {% for proj in student.projects %}{{ proj_row(proj) }}{% endfor %}
       </div>
-      <button class="btn btn-outline" type="button" data-row-add="proj-rows" data-row-template="proj-row-template rowlist-add">+ Proje ekle</button>
+      <button class="btn btn-outline rowlist-add" type="button" data-row-add="proj-rows" data-row-template="proj-row-template">+ Proje ekle</button>
       <template id="proj-row-template">{{ proj_row(namespace(title='', description='', tech_stack='', link='')) }}</template>
     </div>
 

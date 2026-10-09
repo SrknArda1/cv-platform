@@ -33,7 +33,7 @@
     <h1 class="page-title">Aday Havuzu</h1>
   </div>
   <p class="count">
-    <strong>{{ students|length }}</strong> aday
+    <strong>{{ match_count }}</strong> aday
     {%- if is_filtered %} &middot; {{ total_students }} kayıt içinden filtrelendi{% endif -%}
   </p>
 </div>
@@ -69,9 +69,34 @@
     Transkripti olanlar
   </label>
 
-  {# Filtre değişince aktif sıralama kaybolmasın #}
-  <input type="hidden" name="sort" value="{{ sort }}">
-  <input type="hidden" name="dir" value="{{ direction }}">
+  {#
+    Sıralama denetimi. Masaüstünde CSS ile gizlidir — orada sıralama kolon
+    başlıklarına tıklayarak yapılır. Dar ekranda tablo başlığı tamamen
+    kalktığı için burası görünür hale gelir, yoksa telefonda sıralamak
+    imkânsız olurdu. Gizliyken de değerini gönderdiği için filtre
+    uygulandığında aktif sıralama korunur.
+  #}
+  <div class="toolbar-sort">
+    <div class="field">
+      <label class="label" for="f-sort">Sırala</label>
+      <select class="select" id="f-sort" name="sort">
+        {% for key, text in [('name','Ada göre'), ('department','Bölüme göre'),
+                             ('gpa','Ortalamaya göre'), ('experience','Deneyim sayısına göre'),
+                             ('project','Proje sayısına göre'), ('certificate','Sertifika sayısına göre'),
+                             ('transcript','Transkript durumuna göre'), ('completion','Profil doluluğuna göre'),
+                             ('created','Kayıt tarihine göre')] %}
+          <option value="{{ key }}" {{ 'selected' if sort == key }}>{{ text }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label class="label" for="f-dir">Yön</label>
+      <select class="select" id="f-dir" name="dir">
+        <option value="asc"  {{ 'selected' if direction == 'asc' }}>Artan</option>
+        <option value="desc" {{ 'selected' if direction == 'desc' }}>Azalan</option>
+      </select>
+    </div>
+  </div>
 
   <div class="toolbar-actions">
     <button class="btn btn-primary" type="submit">Filtrele</button>
@@ -94,6 +119,7 @@
         <th class="num">{{ sort_th('certificate', 'Sertifika', sort, direction, base, numeric=true) }}</th>
         <th>{{ sort_th('transcript', 'Transkript', sort, direction, base, numeric=true) }}</th>
         <th class="num">{{ sort_th('completion', 'Profil', sort, direction, base, numeric=true) }}</th>
+        <th>{{ sort_th('created', 'Kayıt', sort, direction, base, numeric=true) }}</th>
         <th><span class="hidden">İşlemler</span></th>
       </tr>
     </thead>
@@ -149,6 +175,10 @@
           </span>
         </td>
 
+        <td data-label="Kayıt">
+          <span class="entry-meta">{{ s.created_at.strftime('%d.%m.%Y') if s.created_at else '—' }}</span>
+        </td>
+
         <td class="col-actions">
           <a class="btn-cell" href="{{ url_for('student_detail', student_id=s.id) }}">CV</a>
           <a class="btn-cell" href="{{ url_for('download_student_cv_pdf', student_id=s.id) }}">PDF</a>
@@ -158,6 +188,23 @@
     </tbody>
   </table>
 </div>
+
+{% if page_count > 1 %}
+  <nav class="pager" aria-label="Sayfalar">
+    <span class="pager-info">{{ range_start }}&ndash;{{ range_end }} / {{ match_count }}</span>
+    <div class="pager-links">
+      {% if page > 1 %}
+        <a class="btn btn-outline btn-sm"
+           href="{{ url_for('company_dashboard', sort=sort, dir=direction, page=page - 1, **base) }}">&larr; Önceki</a>
+      {% endif %}
+      <span class="pager-current">{{ page }} / {{ page_count }}</span>
+      {% if page < page_count %}
+        <a class="btn btn-outline btn-sm"
+           href="{{ url_for('company_dashboard', sort=sort, dir=direction, page=page + 1, **base) }}">Sonraki &rarr;</a>
+      {% endif %}
+    </div>
+  </nav>
+{% endif %}
 {% else %}
 <div class="empty">
   <p class="empty-title">{{ 'Filtrelere uyan aday yok' if is_filtered else 'Havuzda henüz aday yok' }}</p>
