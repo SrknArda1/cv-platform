@@ -19,15 +19,25 @@ from flask_migrate import Migrate
 from models import db, User, Education, Experience, Certificate, Project, Department
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-TRANSCRIPT_FOLDER = os.path.join(BASE_DIR, "uploads", "transcripts")
-PHOTO_FOLDER = os.path.join(BASE_DIR, "uploads", "photos")
+
+# Veritabani ve yuklenen dosyalar nereye yazilacak?
+#
+# Yerelde proje klasoru (varsayilan). Sunucuda ise kap (container) dosya
+# sistemi her yeniden baslatmada sifirlandigi icin bunlarin KALICI bir
+# diskte durmasi gerekir: Fly.io'da volume /data'ya baglanir ve
+# DATA_DIR=/data verilir. Aksi halde her dagitimda veritabani ve
+# yuklenen transkriptler silinir.
+DATA_DIR = os.environ.get("DATA_DIR", BASE_DIR)
+
+TRANSCRIPT_FOLDER = os.path.join(DATA_DIR, "uploads", "transcripts")
+PHOTO_FOLDER = os.path.join(DATA_DIR, "uploads", "photos")
 
 ALLOWED_TRANSCRIPT_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 ALLOWED_PHOTO_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-anahtari-degistir")
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE_DIR, "cv_platform.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(DATA_DIR, "cv_platform.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = TRANSCRIPT_FOLDER
 app.config["PHOTO_FOLDER"] = PHOTO_FOLDER
@@ -758,3 +768,147 @@ def create_admin():
     db.session.commit()
     print(f"Yonetici olusturuldu: {email}")
     print("Giris: /admin/giris")
+
+
+@app.cli.command("seed-demo")
+def seed_demo():
+    """Tanitim icin UYDURMA ogrenci verisi olusturur.
+
+    Gercek kisisel veri iceren veritabani sunucuya hic gonderilmez
+    (.dockerignore); dagitim bos bir veritabaniyla acilir. Bu komut,
+    aray�z� dolu gostermek icin tamamen kurgusal kayitlar uretir.
+
+    Kullanim:  flask --app app seed-demo
+    """
+    import random
+    from datetime import timedelta
+
+    if User.query.filter(User.email.like("%@ornek.edu.tr")).first():
+        print("Demo verisi zaten var. Once temizlemek icin: flask --app app clear-demo")
+        return
+
+    random.seed(42)   # her calistirmada ayni sonuc
+
+    adlar = ["Elif", "Yusuf", "Zeynep", "Mert", "Ayse", "Burak", "Deniz", "Emre",
+             "Selin", "Kaan", "Irem", "Ozan", "Ece", "Baris", "Nehir", "Tolga",
+             "Melis", "Arda", "Sude", "Efe", "Derya", "Cem", "Buse", "Hakan",
+             "Pinar", "Onur", "Gizem", "Serkan"]
+    soyadlar = ["Yilmaz", "Demir", "Kaya", "Celik", "Sahin", "Aydin", "Ozturk",
+                "Arslan", "Dogan", "Kilic", "Aslan", "Cetin", "Kara", "Koc"]
+    okullar = ["Kirikkale Universitesi", "Yalova Universitesi", "Ege Universitesi",
+               "Anadolu Universitesi", "Karadeniz Teknik Universitesi"]
+    sirketler = ["Teknoloji A.S.", "Veri Sistemleri", "Fiber Net", "Mavi Yazilim",
+                 "Kuzey Telekom", "Akilli Sebeke"]
+    pozisyonlar = ["Stajyer Yazilim Gelistirici", "Ag Teknisyeni Stajyeri",
+                   "Veri Analisti Stajyeri", "Saha Destek Stajyeri"]
+    sertifikalar = [("Ag Temelleri", "Cisco"), ("Bulut Temelleri", "AWS"),
+                    ("Veri Analizi", "Google"), ("Siber Guvenlik 101", "TUBITAK")]
+    projeler = [("Kampus Ag Simulasyonu", "Python, NS-3"),
+                ("Fiber Kesinti Haritasi", "Flask, Leaflet"),
+                ("Ogrenci Yoklama Sistemi", "Django, SQLite"),
+                ("Sensor Veri Panosu", "Python, Grafana")]
+
+    bolumler = [d.name for d in Department.query.all()] or ["Fiber Teknolojisi"]
+    sifre = generate_password_hash("demo1234")
+    bugun = datetime.now()
+
+    # Paylasilan ornek transkript (gercek bir belge degil)
+    os.makedirs(PHOTO_FOLDER, exist_ok=True)
+    os.makedirs(TRANSCRIPT_FOLDER, exist_ok=True)
+    ornek_transkript = "ornek_transkript.pdf"
+    yol = os.path.join(TRANSCRIPT_FOLDER, ornek_transkript)
+    if not os.path.exists(yol):
+        from reportlab.pdfgen import canvas
+        c = canvas.Canvas(yol)
+        c.setFont("Helvetica-Bold", 20)
+        c.drawString(70, 760, "ORNEK TRANSKRIPT")
+        c.setFont("Helvetica", 11)
+        c.drawString(70, 730, "Bu belge tanitim amaciyla uretilmistir.")
+        c.drawString(70, 712, "Gercek bir ogrenciye ait degildir.")
+        c.save()
+
+    olusan = 0
+    for i in range(28):
+        ad = f"{adlar[i % len(adlar)]} {random.choice(soyadlar)}"
+        eposta = f"ogrenci{i + 1:02d}@ornek.edu.tr"
+
+        # Doluluk cesitliligi: bazilari eksik profil, bazilari eksiksiz
+        seviye = i % 4          # 0=cok eksik, 3=eksiksiz
+        ogr = User(
+            email=eposta,
+            password_hash=sifre,
+            role="student",
+            full_name=ad,
+            department=random.choice(bolumler),
+            phone=f"05{random.randint(10, 59)}{random.randint(1000000, 9999999)}",
+            summary=("Kariyerine aglar ve veri alaninda devam etmek isteyen "
+                     "son sinif ogrencisi.") if seviye >= 1 else None,
+            skills=", ".join(random.sample(
+                ["Python", "SQL", "Linux", "Ag Yonetimi", "Excel", "Git",
+                 "Fiber Optik", "Ingilizce"], k=random.randint(3, 5))
+            ) if seviye >= 1 else None,
+            transcript_filename=ornek_transkript if seviye >= 2 else None,
+            created_at=bugun - timedelta(days=random.randint(1, 300)),
+        )
+        db.session.add(ogr)
+        db.session.flush()
+
+        bitis = random.randint(2023, 2027)
+        db.session.add(Education(
+            student_id=ogr.id, degree_type="Lisans",
+            school=random.choice(okullar), department=ogr.department,
+            gpa=f"{random.uniform(2.1, 3.95):.2f}",
+            start_year=str(bitis - 4), end_year=str(bitis),
+        ))
+        if seviye >= 2:
+            sirket = random.choice(sirketler)
+            db.session.add(Experience(
+                student_id=ogr.id, company=sirket,
+                position=random.choice(pozisyonlar),
+                start_date="Haz 2025", end_date="Agu 2025",
+                description=f"{sirket} bunyesinde yaz stajini tamamladi.",
+            ))
+        if seviye >= 3:
+            sad, kurum = random.choice(sertifikalar)
+            db.session.add(Certificate(
+                student_id=ogr.id, name=sad, institution=kurum, date="2025"))
+            pad, tek = random.choice(projeler)
+            db.session.add(Project(
+                student_id=ogr.id, title=pad, tech_stack=tek,
+                description="Donem projesi kapsaminda gelistirildi."))
+        olusan += 1
+
+    # Tanitim icin onayli bir kurum hesabi
+    if not User.query.filter_by(email="demo@ornek.com").first():
+        db.session.add(User(
+            email="demo@ornek.com", password_hash=sifre, role="company",
+            company_name="Ornek Kurum A.S.", contact_person="Demo Yetkili",
+            is_approved=True, created_at=bugun,
+        ))
+
+    # Onay ekraninda gosterilecek, onay BEKLEYEN bir kurum
+    if not User.query.filter_by(email="bekleyen@ornek.com").first():
+        db.session.add(User(
+            email="bekleyen@ornek.com", password_hash=sifre, role="company",
+            company_name="Bekleyen Kurum Ltd.", contact_person="Aday Yetkili",
+            is_approved=False, created_at=bugun,
+        ))
+
+    db.session.commit()
+    print(f"{olusan} uydurma ogrenci olusturuldu.")
+    print("  Kurum (onayli) : demo@ornek.com / demo1234")
+    print("  Kurum (bekleyen): bekleyen@ornek.com")
+    print("  Ogrenci         : ogrenci01@ornek.edu.tr / demo1234")
+    print("\nYonetici hesabi ayrica olusturulmali: flask --app app create-admin")
+
+
+@app.cli.command("clear-demo")
+def clear_demo():
+    """seed-demo ile olusturulan uydurma kayitlari siler."""
+    demo = User.query.filter(
+        db.or_(User.email.like("%@ornek.edu.tr"), User.email.like("%@ornek.com"))
+    ).all()
+    for u in demo:
+        db.session.delete(u)      # cascade ile CV kayitlari da gider
+    db.session.commit()
+    print(f"{len(demo)} demo kaydi silindi.")

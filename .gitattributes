@@ -1,0 +1,19 @@
+# Satır sonlarını git yönetsin.
+#
+# Depoda her şey LF olarak saklanır; Windows'ta çalışma kopyasına CRLF
+# olarak açılır. Bu, "LF will be replaced by CRLF" uyarılarını da bitirir.
+* text=auto
+
+# Linux'ta çalıştırılan dosyalar ÇALIŞMA KOPYASINDA da LF olmalı.
+# CRLF ile kaydedilirse kap "#!/bin/sh\r" okur ve açılmaz.
+*.sh      text eol=lf
+Dockerfile text eol=lf
+
+# İkili dosyalar: git bunlara dokunmasın
+*.ttf     binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.webp    binary
+*.pdf     binary
+*.db      binary

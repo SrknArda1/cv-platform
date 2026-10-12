@@ -1,0 +1,43 @@
+# ==========================================================================
+# Sunucuya NE GITMEYECEK
+# --------------------------------------------------------------------------
+# DIKKAT: `fly deploy` git'ten degil, BU KLASORDEN yukleme yapar.
+# Yani .gitignore burada seni korumaz — git'e girmeyen bir dosya yine de
+# sunucuya gidebilir. Gercek veritabani ve yuklenen transkript/fotograflar
+# yalnizca bu dosya sayesinde disarida kalir.
+#
+# Degisiklik yapmadan once iki kez dusunun: buradan bir satir silmek,
+# gercek kisisel veriyi internete acik bir sunucuya tasiyabilir.
+# ==========================================================================
+
+# --- Kisisel veri: ASLA sunucuya gitmez ---
+*.db
+*.sqlite
+*.sqlite3
+uploads/photos/*
+uploads/transcripts/*
+# Klasor yapisi dursun (uygulama acilista zaten olusturuyor)
+!uploads/photos/.gitkeep
+!uploads/transcripts/.gitkeep
+
+# --- Gizli anahtarlar ---
+.env
+.env.*
+
+# --- Yerel ortam: kapta yeniden kurulur ---
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+
+# --- Surum kontrolu ve editor ---
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+
+# --- Isletim sistemi ---
+.DS_Store
+Thumbs.db

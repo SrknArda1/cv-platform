@@ -1,0 +1,41 @@
+# Kariyer Portalı — Fly.io yapılandırması
+#
+# app adı benzersiz olmalı; `fly launch` sırasında alınmışsa değiştirin.
+# Bölge: ams = Amsterdam (Türkiye'ye en yakın seçeneklerden biri).
+
+app = "kariyer-portali"
+primary_region = "ams"
+
+[build]
+
+[env]
+  # Veritabanı ve yüklenen dosyalar kalıcı diskte durur.
+  # Bu yol aşağıdaki [mounts] ile eşleşmek ZORUNDA, yoksa her yeniden
+  # başlatmada veritabanı ve transkriptler silinir.
+  DATA_DIR = "/data"
+  FLASK_DEBUG = "0"
+  PORT = "8080"
+
+# Kalıcı disk. SQLite dosyası ve uploads/ burada yaşar.
+[mounts]
+  source = "kariyer_veri"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  # Trafik yokken makineyi durdurur (ücretsiz kotayı korur), istek
+  # gelince birkaç saniyede uyanır. İlk açılış biraz yavaş olabilir.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 20
+    hard_limit = 25
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
