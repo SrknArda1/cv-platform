@@ -33,6 +33,11 @@
              class="nav-link {{ 'is-active' if request.endpoint == 'student_cv_form' }}">CV'mi Düzenle</a>
           <a href="{{ url_for('student_preview') }}"
              class="nav-link {{ 'is-active' if request.endpoint == 'student_preview' }}">Önizleme</a>
+        {% elif current_user.role == 'admin' %}
+          <a href="{{ url_for('admin_companies') }}"
+             class="nav-link {{ 'is-active' if request.endpoint == 'admin_companies' }}">Kurum Onayları</a>
+          <a href="{{ url_for('admin_departments') }}"
+             class="nav-link {{ 'is-active' if request.endpoint == 'admin_departments' }}">Bölümler</a>
         {% else %}
           <a href="{{ url_for('company_dashboard') }}"
              class="nav-link {{ 'is-active' if request.endpoint in ['company_dashboard', 'student_detail'] }}">Aday Havuzu</a>
@@ -82,15 +87,20 @@
            class="{{ 'is-active' if request.endpoint == 'student_cv_form' }}">CV'mi Düzenle</a>
         <a href="{{ url_for('student_preview') }}"
            class="{{ 'is-active' if request.endpoint == 'student_preview' }}">Önizleme</a>
+      {% elif current_user.role == 'admin' %}
+        <a href="{{ url_for('admin_companies') }}"
+           class="{{ 'is-active' if request.endpoint == 'admin_companies' }}">Kurum Onayları</a>
+        <a href="{{ url_for('admin_departments') }}"
+           class="{{ 'is-active' if request.endpoint == 'admin_departments' }}">Bölümler</a>
       {% else %}
         <a href="{{ url_for('company_dashboard') }}"
            class="{{ 'is-active' if request.endpoint in ['company_dashboard', 'student_detail'] }}">Aday Havuzu</a>
       {% endif %}
     {% else %}
+      {# Kayıt bağlantıları burada yok: giriş sayfalarının altında zaten
+         "Hesabınız yok mu? Kayıt olun" bağlantısı var. #}
       <a href="{{ url_for('student_login') }}">Öğrenci Girişi</a>
       <a href="{{ url_for('company_login') }}">Kurum Girişi</a>
-      <a href="{{ url_for('student_register') }}">Öğrenci Kaydı</a>
-      <a href="{{ url_for('company_register') }}">Kurum Kaydı</a>
     {% endif %}
   </nav>
 

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Kurum Onayları — Kariyer Portalı{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Yönetici paneli</span>
+    <h1 class="page-title">Kurum Onayları</h1>
+  </div>
+  <p class="count">
+    {% if pending %}<strong>{{ pending|length }}</strong> onay bekliyor &middot; {% endif %}
+    <strong>{{ approved|length }}</strong> onaylı kurum
+  </p>
+</div>
+
+<section class="group">
+  <h2 class="group-label">Onay bekleyenler</h2>
+
+  {% if pending %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Kurum</th>
+            <th>Yetkili</th>
+            <th>E-posta</th>
+            <th>Başvuru</th>
+            <th><span class="hidden">İşlem</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in pending %}
+          <tr>
+            <td data-label="Kurum"><span class="who-name">{{ c.company_name or '—' }}</span></td>
+            <td data-label="Yetkili">{{ c.contact_person or '—' }}</td>
+            <td data-label="E-posta"><span class="who-mail">{{ c.email }}</span></td>
+            <td data-label="Başvuru">
+              <span class="entry-meta">{{ c.created_at.strftime('%d.%m.%Y') if c.created_at else '—' }}</span>
+            </td>
+            <td class="col-actions">
+              <form method="POST" action="{{ url_for('admin_approve_company', company_id=c.id) }}">
+                <button class="btn btn-primary btn-sm" type="submit">Onayla</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-title">Onay bekleyen kurum yok</p>
+      <p class="empty-text">Yeni bir kurum kaydolduğunda burada listelenecek.</p>
+    </div>
+  {% endif %}
+</section>
+
+<section class="group">
+  <h2 class="group-label">Onaylı kurumlar</h2>
+
+  {% if approved %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Kurum</th>
+            <th>Yetkili</th>
+            <th>E-posta</th>
+            <th>Başvuru</th>
+            <th>Onaylayan</th>
+            <th><span class="hidden">İşlem</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in approved %}
+          <tr>
+            <td data-label="Kurum">
+              <span class="who-name">{{ c.company_name or '—' }}</span>
+              <span class="state state-yes">ERİŞİMİ VAR</span>
+            </td>
+            <td data-label="Yetkili">{{ c.contact_person or '—' }}</td>
+            <td data-label="E-posta"><span class="who-mail">{{ c.email }}</span></td>
+            <td data-label="Başvuru">
+              <span class="entry-meta">{{ c.created_at.strftime('%d.%m.%Y') if c.created_at else '—' }}</span>
+            </td>
+            <td data-label="Onaylayan">
+              {% if c.approved_by %}
+                <span class="who-name">{{ c.approved_by.full_name or c.approved_by.email }}</span>
+                <span class="entry-meta">{{ c.approved_at.strftime('%d.%m.%Y') if c.approved_at else '' }}</span>
+              {% else %}
+                {# Onay kaydi tutulmaya baslamadan once onaylanmis hesaplar #}
+                <span class="state state-no">KAYIT YOK</span>
+              {% endif %}
+            </td>
+            <td class="col-actions">
+              {# Erişim kaldırmak geri alınabilir ama kurumu anında dışarı
+                 atar; yanlışlıkla tıklamaya karşı onay sorulur. #}
+              <form method="POST" action="{{ url_for('admin_revoke_company', company_id=c.id) }}"
+                    data-confirm="{{ c.company_name }} kurumunun aday havuzuna erişimi kaldırılsın mı?">
+                <button class="btn btn-outline btn-sm" type="submit">Erişimi kaldır</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-title">Henüz onaylı kurum yok</p>
+      <p class="empty-text">Onayladığınız kurumlar burada listelenecek.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

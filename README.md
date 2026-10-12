@@ -7,13 +7,13 @@ platform.
 
 ## Mimari
 
-- **Backend:** Flask + Flask-SQLAlchemy + Flask-Login, SQLite veritabanı
+- **Backend:** Flask + Flask-SQLAlchemy + Flask-Login + Flask-Migrate, SQLite veritabanı
 - **Frontend:** Sunucu taraflı Jinja2 şablonları + **kendi CSS'i**
   (`static/style.css`, derleme adımı yok) + hafif vanilla JavaScript
   (sekme geçişi, dinamik satır ekleme/silme, mobil menü, kaydedilmemiş
   değişiklik koruması). **CSS çatısı veya ikon kütüphanesi kullanılmıyor.**
-- **Veri modeli:** `User` tablosu hem öğrenci hem kurum hesaplarını tutar
-  (`role` alanı ile ayrılır). Öğrencinin eğitim/deneyim/sertifika/proje
+- **Veri modeli:** `User` tablosu öğrenci, kurum ve yönetici hesaplarını
+  birlikte tutar (`role` alanı ile ayrılır: `student` / `company` / `admin`). Öğrencinin eğitim/deneyim/sertifika/proje
   bilgileri **ayrı ilişkisel tablolarda** (`Education`, `Experience`,
   `Certificate`, `Project`) tutulur — her biri `User`'a `student_id` ile
   bağlıdır ve öğrenci silinirse otomatik silinir (cascade).
@@ -104,16 +104,25 @@ kendiliğinden düzelir; JavaScript saymaz.
 - Dar ekranda tablo bloklara dönüşür ve ayrı bir sıralama seçicisi belirir
 - Aday detayı: tek sayfalık CV belgesi, yazdırmaya hazır
 
+**Yönetici (kampüs koordinatörü)**
+- Kurum onay ekranı: bekleyenler ve onaylılar ayrı tablolarda, tek tıkla
+  onaylama ve erişim kaldırma
+- Onay kaydı: her onaylı kurumda **kimin, ne zaman** onayladığı görünür
+- Bölüm yönetimi: bölüm ekleme/silme. Öğrencisi olan bölüm silinemez
+  (bölüm öğrenci kaydında metin olarak tutulduğu için silinirse o
+  öğrenciler filtrelerde kaybolurdu)
+- Yönetici hesabı **tarayıcıdan açılamaz**, yalnızca komutla oluşturulur
+
 **Ortak**
 - Tasarımlı 403 / 404 / 413 / 500 sayfaları
 - `/kvkk` — hangi verilerin tutulduğu ve kimin gördüğü (**metin tamamlanmamış**)
 - Klavye erişimi: "içeriğe atla" linki, sekmelerde ok tuşu gezinmesi
 - CV belgesi için yazdırma stili
 
-Bölümler `Department` tablosunda tutulur. İlk açılışta `app.py` içindeki
-`seed_departments()` fonksiyonu `Fiber Teknolojisi` ve `Kurumsal Bilişim`
-kayıtlarını ekler. Yeni bölüm için bu listeye eklemek ya da doğrudan tabloya
-kayıt girmek yeterlidir.
+Bölümler `Department` tablosunda tutulur. İlk açılışta `seed_departments()`
+`Fiber Teknolojisi` ve `Kurumsal Bilişim` kayıtlarını ekler; sonrasında
+yönetici `/admin/bolumler` ekranından ekleyip silebilir (kod değişikliği
+gerekmez).
 
 ## Kurulum
 
@@ -127,6 +136,41 @@ python app.py
 Uygulama `http://127.0.0.1:5000` adresinde çalışır. İlk çalıştırmada
 `cv_platform.db` otomatik oluşturulur.
 
+### Veritabanı şeması güncelleme (migrasyon)
+
+Şema değişiklikleri Flask-Migrate ile yönetilir. Mevcut bir veritabanını
+güncel şemaya getirmek için:
+
+```bash
+venv/Scripts/flask --app app db upgrade
+```
+
+Modeli değiştirdikten sonra yeni migrasyon üretmek için:
+
+```bash
+venv/Scripts/flask --app app db migrate -m "ne degistigini anlatan mesaj"
+venv/Scripts/flask --app app db upgrade
+```
+
+> Üretilen dosyayı **çalıştırmadan önce okuyun**. Alembic'in otomatik ürettiği
+> kod her zaman doğru olmuyor; örneğin ilk migrasyonda `downgrade()` isimsiz
+> bir yabancı anahtar kısıtı düşürmeye çalışıyordu ve o haliyle çalışmazdı.
+
+> Sıfırdan oluşturulan veritabanlarında şema `db.create_all()` ile gelir;
+> böyle bir veritabanını `flask --app app db stamp head` ile güncel
+> işaretleyin, yoksa `upgrade` var olan kolonları eklemeye çalışır.
+
+### Yönetici hesabı nasıl açılır
+
+Yönetici hesabı tarayıcıdan açılamaz — kayıt sayfası yoktur. Olsaydı isteyen
+herkes yönetici olup bütün öğrenci transkriptlerine erişebilirdi.
+
+```bash
+venv/Scripts/flask --app app create-admin
+```
+
+E-posta, ad ve şifre sorar. Giriş: `/admin/giris`
+
 ### Kurum hesabı nasıl açılır (atlanırsa takılırsınız)
 
 Kurum hesapları **onay bekler**; onaylanmadan giriş yapılamaz. Arayüzden kayıt
@@ -137,6 +181,7 @@ venv\Scripts\flask --app app approve-company
 ```
 
 Komut onay bekleyen kurumları listeler; ID girilir veya `all` yazılır.
+Aynı işi yönetici arayüzünden de yapabilirsiniz: `/admin/kurumlar`.
 
 > **Not:** Eski bir `cv_platform.db` dosyanız varsa yeni tablo yapısıyla uyumlu
 > olmayabilir. Geliştirme aşamasında dosyayı silip yeniden başlatmak yeterli;
@@ -169,6 +214,9 @@ Komut onay bekleyen kurumları listeler; ID girilir veya `all` yazılır.
   yazılmış olabilir. Şablon düzeltildi, ancak **mevcut hatalı kayıtlar
   veritabanında duruyor** ve bu öğrenciler bölüm filtresinde çıkmaz.
   Bir `UPDATE` ile temizlenmeleri gerekir.
+- **Onay kaydı geçmiş tutmaz.** `approved_at` / `approved_by` yalnızca
+  **mevcut** onayı tarif eder; erişim kaldırılınca temizlenir. Her onay ve
+  iptal hareketinin geçmişi isteniyorsa ayrı bir kayıt tablosu gerekir.
 - **`updated_at` alanı yok.** Aday havuzundaki "KAYIT" kolonu hesabın açılış
   tarihini gösterir, CV'nin son güncellenme tarihini değil. Kurum için asıl
   değerli olan ikincisidir; modele bir alan eklenmesi gerekir.

@@ -35,6 +35,14 @@ class User(UserMixin, db.Model):
     contact_person = db.Column(db.String(255))
     is_approved = db.Column(db.Boolean, default=False)
 
+    # Onay kaydı: kurum hesabı öğrencilerin kişisel verisine erişim kazandığı
+    # için bu kararın kim tarafından, ne zaman verildiği kayda geçer.
+    approved_at = db.Column(db.DateTime)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    approved_by = db.relationship(
+        "User", remote_side=[id], foreign_keys=[approved_by_id], uselist=False
+    )
+
     # İlişkili kayıtlar (öğrenci CV blokları)
     educations = db.relationship(
         "Education", backref="student", cascade="all, delete-orphan",

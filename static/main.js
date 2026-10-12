@@ -3,7 +3,18 @@ document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initDynamicRows();
   initUnsavedGuard();
+  initConfirmForms();
 });
+
+/* Geri alinmasi zahmetli islemler icin onay sorar.
+   Formda data-confirm="soru" olmasi yeterli; satir ici JavaScript yok. */
+function initConfirmForms() {
+  document.querySelectorAll("form[data-confirm]").forEach((form) => {
+    form.addEventListener("submit", (e) => {
+      if (!window.confirm(form.getAttribute("data-confirm"))) e.preventDefault();
+    });
+  });
+}
 
 function initMobileMenu() {
   const btn = document.getElementById("mobile-menu-btn");

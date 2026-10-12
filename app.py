@@ -14,6 +14,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from xhtml2pdf import pisa
 
+from flask_migrate import Migrate
+
 from models import db, User, Education, Experience, Certificate, Project, Department
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -32,6 +34,11 @@ app.config["PHOTO_FOLDER"] = PHOTO_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
 
 db.init_app(app)
+
+# render_as_batch: SQLite ALTER TABLE'i cok sinirli destekler (kolon silme,
+# kisit degistirme yok). Alembic bu modda tabloyu gecici bir kopyaya tasiyip
+# yeniden olusturur; SQLite'ta migrasyon icin pratikte zorunludur.
+migrate = Migrate(app, db, render_as_batch=True)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -145,6 +152,8 @@ def index():
     if current_user.is_authenticated:
         if current_user.role == "student":
             return redirect(url_for("student_dashboard"))
+        if current_user.role == "admin":
+            return redirect(url_for("admin_companies"))
         return redirect(url_for("company_dashboard"))
     return render_template("index.html")
 
@@ -520,6 +529,135 @@ def download_own_transcript():
     return send_from_directory(app.config["UPLOAD_FOLDER"], current_user.transcript_filename)
 
 
+# ---------- Yönetici (kampüs koordinatörü) ----------
+#
+# Kurum hesaplari is_approved=False olarak dogar ve onaylanmadan giris
+# yapamaz. Onay, bugune kadar yalnizca "flask approve-company" komutuyla
+# veriliyordu; buradaki ekranlar ayni isi tarayicidan yapar.
+#
+# Yonetici hesabi tarayicidan ACILAMAZ: kayit sayfasi yoktur, yalnizca
+# "flask create-admin" komutuyla olusturulur. Aksi halde isteyen herkes
+# yonetici olup butun ogrenci verisine erisebilirdi.
+
+
+@app.route("/admin/giris", methods=["GET", "POST"])
+def admin_login():
+    if current_user.is_authenticated and current_user.role == "admin":
+        return redirect(url_for("admin_companies"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        user = User.query.filter_by(email=email, role="admin").first()
+        if user and check_password_hash(user.password_hash, password):
+            login_user(user)
+            return redirect(url_for("admin_companies"))
+
+        flash("E-posta veya şifre hatalı.", "error")
+        return redirect(url_for("admin_login"))
+
+    return render_template("admin_login.html")
+
+
+@app.route("/admin/kurumlar")
+@login_required
+@role_required("admin")
+def admin_companies():
+    companies = User.query.filter_by(role="company").order_by(User.created_at.desc()).all()
+    pending = [c for c in companies if not c.is_approved]
+    approved = [c for c in companies if c.is_approved]
+    return render_template(
+        "admin_companies.html", pending=pending, approved=approved
+    )
+
+
+@app.route("/admin/kurumlar/<int:company_id>/onayla", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_approve_company(company_id):
+    company = User.query.filter_by(id=company_id, role="company").first_or_404()
+    company.is_approved = True
+    company.approved_at = datetime.now()
+    company.approved_by_id = current_user.id
+    db.session.commit()
+    flash(f"{company.company_name} onaylandı. Artık aday havuzuna erişebilir.", "success")
+    return redirect(url_for("admin_companies"))
+
+
+@app.route("/admin/kurumlar/<int:company_id>/iptal", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_revoke_company(company_id):
+    company = User.query.filter_by(id=company_id, role="company").first_or_404()
+    company.is_approved = False
+    # approved_at/approved_by MEVCUT onayi tarif eder; erisim kalkinca
+    # temizlenir. Tam bir gecmis (her onay/iptal hareketi) istenirse ayri
+    # bir tablo gerekir; bu iki kolon yalnizca son durumu tutar.
+    company.approved_at = None
+    company.approved_by_id = None
+    db.session.commit()
+    flash(f"{company.company_name} erişimi kaldırıldı.", "success")
+    return redirect(url_for("admin_companies"))
+
+
+@app.route("/admin/bolumler", methods=["GET", "POST"])
+@login_required
+@role_required("admin")
+def admin_departments():
+    """Bolum listesi yonetimi.
+
+    Bolumler onceden yalnizca seed_departments() icinde sabitti; yeni bolum
+    eklemek kod degisikligi gerektiriyordu. Burasi koordinatorun kendi
+    ekleyip silebilmesi icin.
+    """
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Bölüm adı boş olamaz.", "error")
+        elif Department.query.filter_by(name=name).first():
+            flash(f"'{name}' zaten listede.", "error")
+        else:
+            db.session.add(Department(name=name))
+            db.session.commit()
+            flash(f"'{name}' bölümü eklendi.", "success")
+        return redirect(url_for("admin_departments"))
+
+    departments = Department.query.order_by(Department.name).all()
+    # Her bolumde kac ogrenci var: silmeden once uyarmak icin
+    counts = {
+        d.name: User.query.filter_by(role="student", department=d.name).count()
+        for d in departments
+    }
+    return render_template(
+        "admin_departments.html", departments=departments, counts=counts
+    )
+
+
+@app.route("/admin/bolumler/<int:department_id>/sil", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_delete_department(department_id):
+    department = Department.query.get_or_404(department_id)
+
+    # Bolum, ogrenci kayitlarinda metin olarak tutuluyor (iliski degil).
+    # Silinirse o ogrencilerin bolumu listede olmayan bir metne doner ve
+    # filtrelerde kaybolurlar; bu yuzden doluyken silinmesine izin yok.
+    in_use = User.query.filter_by(role="student", department=department.name).count()
+    if in_use:
+        flash(
+            f"'{department.name}' silinemez: {in_use} öğrenci bu bölüme kayıtlı. "
+            "Önce o öğrencilerin bölümünü değiştirin.",
+            "error",
+        )
+    else:
+        db.session.delete(department)
+        db.session.commit()
+        flash(f"'{department.name}' bölümü silindi.", "success")
+
+    return redirect(url_for("admin_departments"))
+
+
 # ---------- Çıkış ----------
 
 @app.route("/logout")
@@ -581,3 +719,42 @@ def approve_company():
             print(f"{target.company_name} başarıyla onaylandı.")
         else:
             print("Geçersiz kurum ID.")
+
+
+@app.cli.command("create-admin")
+def create_admin():
+    """Yonetici (kampus koordinatoru) hesabi olusturur.
+
+    Yonetici hesabi tarayicidan acilamaz; tek yol bu komuttur.
+    Kullanim:  flask --app app create-admin
+    """
+    import getpass
+
+    email = input("Yonetici e-postasi: ").strip().lower()
+    if not email:
+        print("E-posta bos olamaz.")
+        return
+
+    if User.query.filter_by(email=email).first():
+        print(f"'{email}' ile zaten bir hesap var.")
+        return
+
+    full_name = input("Ad soyad: ").strip() or "Kampus Koordinatoru"
+
+    password = getpass.getpass("Sifre (en az 6 karakter): ")
+    if len(password) < 6:
+        print("Sifre en az 6 karakter olmali.")
+        return
+    if password != getpass.getpass("Sifre (tekrar): "):
+        print("Sifreler eslesmiyor.")
+        return
+
+    db.session.add(User(
+        email=email,
+        password_hash=generate_password_hash(password),
+        role="admin",
+        full_name=full_name,
+    ))
+    db.session.commit()
+    print(f"Yonetici olusturuldu: {email}")
+    print("Giris: /admin/giris")

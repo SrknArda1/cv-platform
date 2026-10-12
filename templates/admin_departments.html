@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Bölümler — Kariyer Portalı{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Yönetici paneli</span>
+    <h1 class="page-title">Bölümler</h1>
+  </div>
+  <p class="count"><strong>{{ departments|length }}</strong> bölüm</p>
+</div>
+
+<form method="POST" class="toolbar">
+  <div class="field toolbar-grow">
+    <label class="label" for="name">Yeni bölüm adı</label>
+    <input class="input" type="text" id="name" name="name" required
+           placeholder="Örn: Bilgisayar Mühendisliği" autofocus>
+  </div>
+  <div class="toolbar-actions">
+    <button class="btn btn-primary" type="submit">Ekle</button>
+  </div>
+</form>
+
+{% if departments %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Bölüm</th>
+        <th class="num">Kayıtlı öğrenci</th>
+        <th><span class="hidden">İşlem</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in departments %}
+      {% set adet = counts.get(d.name, 0) %}
+      <tr>
+        <td data-label="Bölüm"><span class="who-name">{{ d.name }}</span></td>
+        <td class="num {{ 'num-empty' if not adet }}" data-label="Kayıtlı öğrenci">{{ adet }}</td>
+        <td class="col-actions">
+          {% if adet %}
+            {# Bölüm öğrenci kayıtlarında metin olarak tutuluyor; dolu bölüm
+               silinirse o öğrenciler filtrelerde kaybolur. #}
+            <span class="state state-no" title="Bu bölümde öğrenci var">SİLİNEMEZ</span>
+          {% else %}
+            <form method="POST" action="{{ url_for('admin_delete_department', department_id=d.id) }}"
+                  data-confirm="'{{ d.name }}' bölümü silinsin mi?">
+              <button class="btn btn-outline btn-sm" type="submit">Sil</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <p class="empty-title">Henüz bölüm yok</p>
+  <p class="empty-text">Yukarıdaki alandan ilk bölümü ekleyin; öğrenciler kayıt olurken buradan seçecek.</p>
+</div>
+{% endif %}
+{% endblock %}

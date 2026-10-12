@@ -1,0 +1,24 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Yönetici Girişi — Kariyer Portalı{% endblock %}
+{% block auth_eyebrow %}Kampüs koordinatörü{% endblock %}
+{% block auth_title %}Yönetici girişi{% endblock %}
+{% block auth_text %}Kurum başvurularını onaylamak için hesabınıza girin.{% endblock %}
+{% block auth_submit %}Giriş yap{% endblock %}
+
+{% block auth_fields %}
+  <div class="field">
+    <label class="label" for="email">E-posta</label>
+    <input class="input input-lg" type="email" id="email" name="email" required autocomplete="email" autofocus>
+  </div>
+  <div class="field">
+    <label class="label" for="password">Şifre</label>
+    <input class="input input-lg" type="password" id="password" name="password" required autocomplete="current-password">
+  </div>
+{% endblock %}
+
+{% block auth_foot %}
+  {# Yönetici hesabı tarayıcıdan açılamaz, bu yüzden kayıt bağlantısı yok. #}
+  Yönetici hesabı yalnızca sunucuda <code>flask --app app create-admin</code>
+  komutuyla oluşturulur.
+{% endblock %}
