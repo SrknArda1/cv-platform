@@ -34,6 +34,10 @@
           <a href="{{ url_for('student_preview') }}"
              class="nav-link {{ 'is-active' if request.endpoint == 'student_preview' }}">Önizleme</a>
         {% elif current_user.role == 'admin' %}
+          <a href="{{ url_for('admin_overview') }}"
+             class="nav-link {{ 'is-active' if request.endpoint == 'admin_overview' }}">Genel Bakış</a>
+          <a href="{{ url_for('admin_students') }}"
+             class="nav-link {{ 'is-active' if request.endpoint == 'admin_students' }}">Öğrenciler</a>
           <a href="{{ url_for('admin_companies') }}"
              class="nav-link {{ 'is-active' if request.endpoint == 'admin_companies' }}">Kurum Onayları</a>
           <a href="{{ url_for('admin_departments') }}"
@@ -88,6 +92,10 @@
         <a href="{{ url_for('student_preview') }}"
            class="{{ 'is-active' if request.endpoint == 'student_preview' }}">Önizleme</a>
       {% elif current_user.role == 'admin' %}
+        <a href="{{ url_for('admin_overview') }}"
+           class="{{ 'is-active' if request.endpoint == 'admin_overview' }}">Genel Bakış</a>
+        <a href="{{ url_for('admin_students') }}"
+           class="{{ 'is-active' if request.endpoint == 'admin_students' }}">Öğrenciler</a>
         <a href="{{ url_for('admin_companies') }}"
            class="{{ 'is-active' if request.endpoint == 'admin_companies' }}">Kurum Onayları</a>
         <a href="{{ url_for('admin_departments') }}"

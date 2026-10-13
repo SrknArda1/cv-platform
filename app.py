@@ -124,11 +124,17 @@ def allowed_photo(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_PHOTO_EXTENSIONS
 
 
-def role_required(role):
+def role_required(*roles):
+    """Sayfayi yalnizca belirtilen rollere acar.
+
+    Birden fazla rol verilebilir: role_required("company", "admin").
+    Yonetici, transkripti dogrulayabilmek icin kurum sayfalarindan bazilarina
+    (CV goruntuleme, transkript acma) erismek zorunda.
+    """
     def decorator(f):
         @wraps(f)
         def wrapped(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.role != role:
+            if not current_user.is_authenticated or current_user.role not in roles:
                 abort(403)
             return f(*args, **kwargs)
         return wrapped
@@ -243,7 +249,7 @@ def index():
         if current_user.role == "student":
             return redirect(url_for("student_dashboard"))
         if current_user.role == "admin":
-            return redirect(url_for("admin_companies"))
+            return redirect(url_for("admin_overview"))
         return redirect(url_for("company_dashboard"))
     return render_template("index.html")
 
@@ -358,6 +364,14 @@ def student_cv_form():
             file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
             current_user.transcript_filename = filename
 
+            # Yeni belge yuklendi: onceki dogrulama artik gecersiz.
+            # Bu sifirlama olmadan ogrenci dogrulanmis transkripti baska bir
+            # dosyayla degistirip "dogrulandi" rozetini tasimaya devam
+            # edebilirdi -- dogrulamanin tum anlamini bosa cikarirdi.
+            current_user.transcript_verified = False
+            current_user.transcript_verified_at = None
+            current_user.transcript_verified_by_id = None
+
         # Dinamik bölümleri sıfırlayıp yeniden oluştur
         Education.query.filter_by(student_id=current_user.id).delete()
         Experience.query.filter_by(student_id=current_user.id).delete()
@@ -470,7 +484,8 @@ CANDIDATE_SORTERS = {
     "experience":  (lambda s: len(s.experiences), lambda s: False),
     "project":     (lambda s: len(s.projects), lambda s: False),
     "certificate": (lambda s: len(s.certificates), lambda s: False),
-    "transcript":  (lambda s: bool(s.transcript_filename), lambda s: False),
+    "transcript":  (lambda s: (bool(s.transcript_filename), s.transcript_verified),
+                    lambda s: False),
     "completion":  (lambda s: s.profile_completion(), lambda s: False),
     "created":     (lambda s: s.created_at or datetime.min, lambda s: s.created_at is None),
 }
@@ -486,6 +501,7 @@ def company_dashboard():
     selected_department = request.args.get("department", "")
     q = request.args.get("q", "").strip()
     only_with_transcript = request.args.get("has_transcript") == "1"
+    only_verified = request.args.get("verified") == "1"
 
     try:
         min_completion = int(request.args.get("min_completion", 0))
@@ -512,6 +528,8 @@ def company_dashboard():
         )
     if only_with_transcript:
         query = query.filter(User.transcript_filename.isnot(None))
+    if only_verified:
+        query = query.filter(User.transcript_verified.is_(True))
 
     students = query.all()
     total_students = User.query.filter_by(role="student").count()
@@ -547,6 +565,7 @@ def company_dashboard():
         selected_department=selected_department,
         q=q,
         only_with_transcript=only_with_transcript,
+        only_verified=only_verified,
         min_completion=min_completion,
         sort=sort,
         direction=direction,
@@ -561,7 +580,7 @@ def company_dashboard():
 
 @app.route("/company/student/<int:student_id>")
 @login_required
-@role_required("company")
+@role_required("company", "admin")
 def student_detail(student_id):
     student = User.query.filter_by(id=student_id, role="student").first_or_404()
     return render_template("cv_detail.html", student=student, is_own_preview=False)
@@ -608,7 +627,7 @@ def download_student_cv_pdf(student_id):
 
 @app.route("/company/transcript/<int:student_id>")
 @login_required
-@role_required("company")
+@role_required("company", "admin")
 def download_transcript(student_id):
     student = User.query.filter_by(id=student_id, role="student").first_or_404()
     if not student.transcript_filename:
@@ -643,7 +662,7 @@ def download_own_transcript():
 @limiter.limit("5 per minute; 20 per hour", methods=["POST"])
 def admin_login():
     if current_user.is_authenticated and current_user.role == "admin":
-        return redirect(url_for("admin_companies"))
+        return redirect(url_for("admin_overview"))
 
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
@@ -654,7 +673,7 @@ def admin_login():
             login_user(user)
             guvenlik_log.info(
                 "Yonetici girisi: %s (IP: %s)", email, get_remote_address())
-            return redirect(url_for("admin_companies"))
+            return redirect(url_for("admin_overview"))
 
         # Yonetici hesabina yonelik denemeler ayrica dikkat cekici
         guvenlik_log.warning(
@@ -704,6 +723,148 @@ def admin_revoke_company(company_id):
     db.session.commit()
     flash(f"{company.company_name} erişimi kaldırıldı.", "success")
     return redirect(url_for("admin_companies"))
+
+
+@app.route("/admin")
+@login_required
+@role_required("admin")
+def admin_overview():
+    """Koordinatorun giris ekrani: platformun tek bakista ozeti."""
+    students = User.query.filter_by(role="student").all()
+    companies = User.query.filter_by(role="company").all()
+    departments = Department.query.order_by(Department.name).all()
+
+    ozet = {
+        "ogrenci": len(students),
+        "eksiksiz": sum(1 for s in students if s.is_profile_complete()),
+        "transkript": sum(1 for s in students if s.transcript_filename),
+        "dogrulanmis": sum(1 for s in students if s.transcript_verified),
+        "kurum_onayli": sum(1 for c in companies if c.is_approved),
+        "kurum_bekleyen": sum(1 for c in companies if not c.is_approved),
+    }
+
+    # Bolum dagilimi: hangi bolumde kac ogrenci, en kalabaliktan baslayarak
+    dagilim = sorted(
+        ((d.name, sum(1 for s in students if s.department == d.name)) for d in departments),
+        key=lambda x: -x[1],
+    )
+    # Listede olmayan bir bolume kayitli ogrenciler (eski/bozuk veri)
+    bilinen = {d.name for d in departments}
+    baska = sum(1 for s in students if s.department and s.department not in bilinen)
+
+    return render_template(
+        "admin_overview.html", ozet=ozet, dagilim=dagilim, baska=baska,
+        en_cok=max((a for _, a in dagilim), default=0),
+    )
+
+
+@app.route("/admin/ogrenciler")
+@login_required
+@role_required("admin")
+def admin_students():
+    """Ogrenci listesi.
+
+    Koordinatorun ogrencileri gorebilmesi gerekir: destek istegi geldiginde
+    kisiyi bulmak, profili eksik olanlari tespit edip hatirlatma yapmak ve
+    sahte kayitlari temizlemek icin.
+    """
+    q = request.args.get("q", "").strip()
+    durum = request.args.get("durum", "")
+
+    query = User.query.filter_by(role="student")
+    if q:
+        like = f"%{q}%"
+        query = query.filter(db.or_(User.full_name.ilike(like), User.email.ilike(like)))
+
+    students = query.all()
+
+    if durum == "eksik":
+        students = [s for s in students if not s.is_profile_complete()]
+    elif durum == "transkriptsiz":
+        students = [s for s in students if not s.transcript_filename]
+    elif durum == "dogrulanmamis":
+        students = [s for s in students if s.transcript_filename and not s.transcript_verified]
+
+    students.sort(key=lambda s: (s.full_name or "").casefold())
+
+    return render_template(
+        "admin_students.html", students=students, q=q, durum=durum,
+        toplam=User.query.filter_by(role="student").count(),
+    )
+
+
+@app.route("/admin/ogrenciler/<int:student_id>/transkript-dogrula", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_verify_transcript(student_id):
+    student = User.query.filter_by(id=student_id, role="student").first_or_404()
+    if not student.transcript_filename:
+        flash("Bu öğrencinin yüklenmiş transkripti yok.", "error")
+        return redirect(url_for("admin_students"))
+
+    student.transcript_verified = True
+    student.transcript_verified_at = datetime.now()
+    student.transcript_verified_by_id = current_user.id
+    db.session.commit()
+    guvenlik_log.info("Transkript dogrulandi: ogrenci=%s, yonetici=%s",
+                      student.email, current_user.email)
+    flash(f"{student.full_name} — transkript doğrulandı.", "success")
+    return redirect(request.referrer or url_for("admin_students"))
+
+
+@app.route("/admin/ogrenciler/<int:student_id>/transkript-iptal", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_unverify_transcript(student_id):
+    student = User.query.filter_by(id=student_id, role="student").first_or_404()
+    student.transcript_verified = False
+    student.transcript_verified_at = None
+    student.transcript_verified_by_id = None
+    db.session.commit()
+    guvenlik_log.info("Transkript dogrulamasi kaldirildi: ogrenci=%s, yonetici=%s",
+                      student.email, current_user.email)
+    flash(f"{student.full_name} — transkript doğrulaması kaldırıldı.", "success")
+    return redirect(request.referrer or url_for("admin_students"))
+
+
+@app.route("/admin/kullanici/<int:user_id>/sil", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_delete_user(user_id):
+    """Hesabi ve ona bagli her seyi siler. GERI ALINAMAZ.
+
+    Veritabani kaydi cascade ile gider (egitim/deneyim/sertifika/proje), ama
+    diskteki dosyalar otomatik silinmez -- onlari elle kaldirmak gerekir,
+    aksi halde silinen ogrencinin transkripti sunucuda kalirdi.
+    """
+    user = User.query.get_or_404(user_id)
+
+    if user.id == current_user.id:
+        flash("Kendi hesabınızı silemezsiniz.", "error")
+        return redirect(url_for("admin_students"))
+    if user.role == "admin":
+        flash("Yönetici hesapları buradan silinemez.", "error")
+        return redirect(url_for("admin_students"))
+
+    # Diskteki dosyalari temizle
+    for klasor, dosya in ((TRANSCRIPT_FOLDER, user.transcript_filename),
+                          (PHOTO_FOLDER, user.photo_filename)):
+        if dosya:
+            try:
+                os.remove(os.path.join(klasor, dosya))
+            except OSError:
+                pass        # dosya zaten yoksa sorun degil
+
+    ad = user.full_name or user.company_name or user.email
+    eposta, rol = user.email, user.role
+    db.session.delete(user)
+    db.session.commit()
+
+    guvenlik_log.warning("Hesap silindi: %s (%s), silen yonetici=%s",
+                         eposta, rol, current_user.email)
+    flash(f"{ad} hesabı ve tüm kayıtları silindi.", "success")
+    return redirect(url_for("admin_students") if rol == "student"
+                    else url_for("admin_companies"))
 
 
 @app.route("/admin/bolumler", methods=["GET", "POST"])

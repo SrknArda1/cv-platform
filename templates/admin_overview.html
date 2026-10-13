@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Genel Bakış — Kariyer Portalı{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Yönetici paneli</span>
+    <h1 class="page-title">Genel Bakış</h1>
+  </div>
+  {% if ozet.kurum_bekleyen %}
+    <a class="btn btn-primary" href="{{ url_for('admin_companies') }}">
+      {{ ozet.kurum_bekleyen }} kurum onay bekliyor
+    </a>
+  {% endif %}
+</div>
+
+<section class="group">
+  <h2 class="group-label">Öğrenciler</h2>
+  <div class="stat-row">
+    <div class="stat">
+      <span class="stat-num">{{ ozet.ogrenci }}</span>
+      <span class="stat-label">Kayıtlı</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">{{ ozet.eksiksiz }}</span>
+      <span class="stat-label">Profili eksiksiz</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">{{ ozet.transkript }}</span>
+      <span class="stat-label">Transkript yüklü</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">{{ ozet.dogrulanmis }}</span>
+      <span class="stat-label">Doğrulanmış</span>
+    </div>
+  </div>
+
+  {% set eksik = ozet.ogrenci - ozet.eksiksiz %}
+  {% if eksik %}
+    <p class="overview-note">
+      <strong>{{ eksik }}</strong> öğrencinin profili eksik — boş CV'ler havuzu
+      kurumlar için değersizleştirir.
+      <a class="link-accent" href="{{ url_for('admin_students', durum='eksik') }}">Listeyi gör</a>
+    </p>
+  {% endif %}
+
+  {% set dogrulanmamis = ozet.transkript - ozet.dogrulanmis %}
+  {% if dogrulanmamis %}
+    <p class="overview-note">
+      <strong>{{ dogrulanmamis }}</strong> transkript doğrulanmayı bekliyor.
+      <a class="link-accent" href="{{ url_for('admin_students', durum='dogrulanmamis') }}">Doğrulamaya geç</a>
+    </p>
+  {% endif %}
+</section>
+
+<section class="group">
+  <h2 class="group-label">Kurumlar</h2>
+  <div class="stat-row">
+    <div class="stat">
+      <span class="stat-num">{{ ozet.kurum_onayli }}</span>
+      <span class="stat-label">Onaylı</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">{{ ozet.kurum_bekleyen }}</span>
+      <span class="stat-label">Onay bekliyor</span>
+    </div>
+  </div>
+</section>
+
+<section class="group">
+  <h2 class="group-label">Bölüm dağılımı</h2>
+  {% if dagilim %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Bölüm</th>
+            <th class="num">Öğrenci</th>
+            <th><span class="hidden">Oran</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ad, adet in dagilim %}
+          <tr>
+            <td data-label="Bölüm"><span class="dept">{{ ad }}</span></td>
+            <td class="num {{ 'num-empty' if not adet }}" data-label="Öğrenci">{{ adet }}</td>
+            <td>
+              {# Basit oran çubuğu: en kalabalık bölüm tam genişlik #}
+              <span class="bar"><span class="bar-fill"
+                    style="width:{{ (adet / en_cok * 100) if en_cok else 0 }}%"></span></span>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if baska %}
+          <tr>
+            <td data-label="Bölüm"><span class="state state-no">LİSTEDE OLMAYAN</span></td>
+            <td class="num" data-label="Öğrenci">{{ baska }}</td>
+            <td><span class="entry-meta">bölüm listesinde bulunmayan bir değere kayıtlı</span></td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-title">Henüz bölüm tanımlı değil</p>
+      <p class="empty-text">
+        <a class="link-accent" href="{{ url_for('admin_departments') }}">Bölümler</a>
+        sayfasından ekleyebilirsiniz.
+      </p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

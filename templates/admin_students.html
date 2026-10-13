@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Öğrenciler — Kariyer Portalı{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Yönetici paneli</span>
+    <h1 class="page-title">Öğrenciler</h1>
+  </div>
+  <p class="count">
+    <strong>{{ students|length }}</strong> öğrenci
+    {%- if q or durum %} &middot; {{ toplam }} kayıt içinden filtrelendi{% endif -%}
+  </p>
+</div>
+
+<form method="GET" class="toolbar">
+  <div class="field toolbar-grow">
+    <label class="label" for="f-q">Ara</label>
+    <input class="input input-search" type="search" id="f-q" name="q" value="{{ q }}"
+           placeholder="İsim veya e-posta">
+  </div>
+
+  <div class="field toolbar-fixed">
+    <label class="label" for="f-durum">Durum</label>
+    <select class="select" id="f-durum" name="durum">
+      <option value="">Tümü</option>
+      <option value="eksik" {{ 'selected' if durum == 'eksik' }}>Profili eksik</option>
+      <option value="transkriptsiz" {{ 'selected' if durum == 'transkriptsiz' }}>Transkripti yok</option>
+      <option value="dogrulanmamis" {{ 'selected' if durum == 'dogrulanmamis' }}>Transkript doğrulanmamış</option>
+    </select>
+  </div>
+
+  <div class="toolbar-actions">
+    <button class="btn btn-primary" type="submit">Filtrele</button>
+    {% if q or durum %}
+      <a class="btn btn-outline" href="{{ url_for('admin_students') }}">Temizle</a>
+    {% endif %}
+  </div>
+</form>
+
+{% if students %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Öğrenci</th>
+        <th>Bölüm</th>
+        <th class="num">Profil</th>
+        <th>Transkript</th>
+        <th>Kayıt</th>
+        <th><span class="hidden">İşlemler</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in students %}
+      {% set pct = s.profile_completion() %}
+      <tr>
+        <td class="cell-who">
+          <div class="who">
+            <span class="portrait portrait-md">
+              {% if s.photo_filename %}
+                <img src="{{ url_for('uploaded_photo', filename=s.photo_filename) }}" alt="">
+              {% else %}{{ s.initials }}{% endif %}
+            </span>
+            <span class="who-text">
+              <span class="who-name">{{ s.full_name or 'İsimsiz' }}</span>
+              <span class="who-mail">{{ s.email }}</span>
+            </span>
+          </div>
+        </td>
+
+        <td data-label="Bölüm">
+          {% if s.department %}
+            <span class="dept">{{ s.department }}</span>
+          {% else %}<span class="state state-no">—</span>{% endif %}
+        </td>
+
+        <td class="num" data-label="Profil">
+          <span class="meter {{ 'is-high' if pct >= 85 else 'is-mid' if pct >= 50 else '' }}">
+            <span class="meter-track"><span class="meter-fill" style="width:{{ pct }}%"></span></span>
+            <span class="meter-val">%{{ pct }}</span>
+          </span>
+        </td>
+
+        <td data-label="Transkript">
+          {% if not s.transcript_filename %}
+            <span class="state state-no">YOK</span>
+          {% elif s.transcript_verified %}
+            <span class="state state-yes">DOĞRULANDI</span>
+            {% if s.transcript_verified_by %}
+              <span class="entry-meta">{{ s.transcript_verified_by.full_name or s.transcript_verified_by.email }}
+                {{ s.transcript_verified_at.strftime('%d.%m.%Y') if s.transcript_verified_at else '' }}</span>
+            {% endif %}
+          {% else %}
+            <span class="state state-warn">BEKLİYOR</span>
+          {% endif %}
+        </td>
+
+        <td data-label="Kayıt">
+          <span class="entry-meta">{{ s.created_at.strftime('%d.%m.%Y') if s.created_at else '—' }}</span>
+        </td>
+
+        <td class="col-actions">
+          <a class="btn-cell" href="{{ url_for('student_detail', student_id=s.id) }}">CV</a>
+
+          {% if s.transcript_filename %}
+            <a class="btn-cell" href="{{ url_for('download_transcript', student_id=s.id) }}"
+               target="_blank" rel="noopener">BELGE</a>
+            {% if s.transcript_verified %}
+              <form method="POST" action="{{ url_for('admin_unverify_transcript', student_id=s.id) }}"
+                    data-confirm="{{ s.full_name }} — transkript doğrulaması kaldırılsın mı?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn-cell" type="submit">İPTAL</button>
+              </form>
+            {% else %}
+              {# Doğrulamadan önce BELGE'ye tıklayıp belgenin gerçekten
+                 o öğrenciye ait bir transkript olduğu kontrol edilmeli. #}
+              <form method="POST" action="{{ url_for('admin_verify_transcript', student_id=s.id) }}"
+                    data-confirm="Belgeyi açıp kontrol ettiniz mi? {{ s.full_name }} için transkript doğrulanacak.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn-cell btn-cell-ok" type="submit">DOĞRULA</button>
+              </form>
+            {% endif %}
+          {% endif %}
+
+          <form method="POST" action="{{ url_for('admin_delete_user', user_id=s.id) }}"
+                data-confirm="{{ s.full_name or s.email }} hesabı ve TÜM CV kayıtları kalıcı olarak silinecek. Bu işlem geri alınamaz. Emin misiniz?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn-cell btn-cell-danger" type="submit">SİL</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <p class="empty-title">{{ 'Ölçütlere uyan öğrenci yok' if (q or durum) else 'Henüz öğrenci yok' }}</p>
+  <p class="empty-text">
+    {% if q or durum %}
+      <a class="link-accent" href="{{ url_for('admin_students') }}">Filtreleri temizle</a>
+    {% else %}
+      Öğrenciler kayıt oldukça burada listelenecek.
+    {% endif %}
+  </p>
+</div>
+{% endif %}
+{% endblock %}

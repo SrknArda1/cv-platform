@@ -43,6 +43,22 @@ class User(UserMixin, db.Model):
         "User", remote_side=[id], foreign_keys=[approved_by_id], uselist=False
     )
 
+    # Transkript doğrulama (öğrenciye ait)
+    #
+    # Herkes herhangi bir PDF yükleyip "transkriptim" diyebilir. Koordinatör
+    # belgeyi açıp doğruladığında kurum tarafında "VAR" yerine "DOĞRULANDI"
+    # görünür — platformun kuruma sunduğu güven buna dayanır.
+    #
+    # ÖNEMLİ: Öğrenci yeni bir transkript yüklediğinde bu alan sıfırlanır
+    # (bkz. student_cv_form). Aksi halde doğrulanmış belgeyi değiştirip
+    # doğrulanmış görünmeye devam edebilirdi.
+    transcript_verified = db.Column(db.Boolean, default=False, nullable=False)
+    transcript_verified_at = db.Column(db.DateTime)
+    transcript_verified_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    transcript_verified_by = db.relationship(
+        "User", remote_side=[id], foreign_keys=[transcript_verified_by_id], uselist=False
+    )
+
     # İlişkili kayıtlar (öğrenci CV blokları)
     educations = db.relationship(
         "Education", backref="student", cascade="all, delete-orphan",

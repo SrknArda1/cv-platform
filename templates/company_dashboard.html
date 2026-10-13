@@ -23,9 +23,10 @@
      'q': q or none,
      'department': selected_department or none,
      'has_transcript': '1' if only_with_transcript else none,
+     'verified': '1' if only_verified else none,
      'min_completion': min_completion or none
    } %}
-{% set is_filtered = q or selected_department or only_with_transcript or min_completion %}
+{% set is_filtered = q or selected_department or only_with_transcript or only_verified or min_completion %}
 
 <div class="page-head">
   <div>
@@ -67,6 +68,11 @@
   <label class="check">
     <input type="checkbox" name="has_transcript" value="1" {{ 'checked' if only_with_transcript }}>
     Transkripti olanlar
+  </label>
+
+  <label class="check">
+    <input type="checkbox" name="verified" value="1" {{ 'checked' if only_verified }}>
+    Sadece doğrulanmış
   </label>
 
   {#
@@ -160,11 +166,17 @@
         <td class="num {{ 'num-empty' if not s.certificates }}" data-label="Sertifika">{{ s.certificates|length }}</td>
 
         <td data-label="Transkript">
-          {% if s.transcript_filename %}
-            <a class="state state-yes" href="{{ url_for('download_transcript', student_id=s.id) }}"
-               target="_blank" rel="noopener">VAR &rarr;</a>
-          {% else %}
+          {% if not s.transcript_filename %}
             <span class="state state-no">YOK</span>
+          {% elif s.transcript_verified %}
+            {# Kampüs koordinatörü belgeyi açıp kontrol etmiş #}
+            <a class="state state-yes" href="{{ url_for('download_transcript', student_id=s.id) }}"
+               target="_blank" rel="noopener"
+               title="Kampüs koordinatörü tarafından doğrulandı">DOĞRULANDI &rarr;</a>
+          {% else %}
+            <a class="state state-warn" href="{{ url_for('download_transcript', student_id=s.id) }}"
+               target="_blank" rel="noopener"
+               title="Yüklenmiş ama henüz doğrulanmamış">YÜKLENDİ &rarr;</a>
           {% endif %}
         </td>
 

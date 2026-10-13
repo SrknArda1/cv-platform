@@ -1521,6 +1521,34 @@ a.state-yes:hover { text-decoration: underline; text-underline-offset: 2px; }
 /* Tablo içindeki aksiyon formu satırı bozmasın */
 .col-actions form { display: inline-block; margin: 0; }
 
+/* Oran çubuğu (bölüm dağılımı) */
+.bar {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar-fill { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+
+/* Genel bakış sayfasındaki uyarı satırları */
+.overview-note {
+  margin: var(--s-4) 0 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  font-size: var(--t-base);
+  color: var(--ink-2);
+}
+
+/* Bekleyen durumu (doğrulanmamış transkript) */
+.state-warn { color: var(--warn); }
+
+/* Tablo içi onay ve tehlike aksiyonları */
+.btn-cell-ok:hover { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
+.btn-cell-danger:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+
 /* --------------------------------------------------------------------------
    Sayfalama
    -------------------------------------------------------------------------- */
