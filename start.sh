@@ -29,12 +29,17 @@ fi
 
 echo "[start] gunicorn başlatılıyor (port ${PORT})"
 
-# --workers 2: SQLite tek dosyaya yazdığı için çok işçi eşzamanlı yazmada
-#   kilitlenmeye yol açabilir. Bu ölçekte 2 yeterli ve güvenli.
-# --timeout 60: PDF üretimi gibi yavaş istekler kesilmesin.
+# --workers 1: BILINCLI bir tercih, iki sebeple.
+#   1) Flask-Limiter sayaclari surec belleginde (memory://) tutuluyor. Iki
+#      isci olsaydi her biri kendi sayacini tutar, yoneticiye koydugumuz
+#      5 deneme/dakika siniri pratikte 10'a cikardi.
+#   2) SQLite tek dosyaya yazar; cok isci eszamanli yazmada kilitlenebilir.
+#   Bu olcekteki trafik icin tek isci fazlasiyla yeterli. Daha fazla isci
+#   gerekirse sayaclar once Redis'e tasinmali, yoksa sinir anlamsizlasir.
+# --timeout 60: yavas istekler (PDF uretimi) kesilmesin.
 exec gunicorn \
     --bind "0.0.0.0:${PORT}" \
-    --workers 2 \
+    --workers 1 \
     --timeout 60 \
     --access-logfile - \
     --error-logfile - \
