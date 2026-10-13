@@ -7,7 +7,8 @@ platform.
 
 ## Mimari
 
-- **Backend:** Flask + Flask-SQLAlchemy + Flask-Login + Flask-Migrate, SQLite veritabanı
+- **Backend:** Flask + Flask-SQLAlchemy + Flask-Login + Flask-Migrate +
+  Flask-WTF (CSRF), SQLite veritabanı
 - **Frontend:** Sunucu taraflı Jinja2 şablonları + **kendi CSS'i**
   (`static/style.css`, derleme adımı yok) + hafif vanilla JavaScript
   (sekme geçişi, dinamik satır ekleme/silme, mobil menü, kaydedilmemiş
@@ -113,8 +114,19 @@ kendiliğinden düzelir; JavaScript saymaz.
   öğrenciler filtrelerde kaybolurdu)
 - Yönetici hesabı **tarayıcıdan açılamaz**, yalnızca komutla oluşturulur
 
+**Güvenlik**
+- Şifreler hash'lenerek saklanır (Werkzeug / scrypt)
+- Roller ayrı: öğrenci, kurum ve yönetici birbirinin sayfalarına giremez (403)
+- Kurum hesapları onaydan geçmeden giriş yapamaz
+- Yüklenen fotoğraf ve transkriptler giriş gerektirir
+- Durum değiştiren her işlem POST ve **CSRF token** ile korunur
+- Dışa açık çalıştırmada (`FLASK_DEBUG=0`) `SECRET_KEY` verilmemişse uygulama
+  başlamayı reddeder
+- Gerçek veritabanı ve yüklenen dosyalar ne git'e ne de sunucuya gider
+  (`.gitignore` + `.dockerignore`)
+
 **Ortak**
-- Tasarımlı 403 / 404 / 413 / 500 sayfaları
+- Tasarımlı 400 / 403 / 404 / 413 / 500 sayfaları
 - `/kvkk` — hangi verilerin tutulduğu ve kimin gördüğü (**metin tamamlanmamış**)
 - Klavye erişimi: "içeriğe atla" linki, sekmelerde ok tuşu gezinmesi
 - CV belgesi için yazdırma stili
@@ -201,6 +213,20 @@ Aynı işi yönetici arayüzünden de yapabilirsiniz: `/admin/kurumlar`.
 
 `%85` ve üzeri "profil eksiksiz" kabul edilir.
 
+## Geliştirirken dikkat
+
+**Yeni bir POST formu eklerken CSRF token'ını unutmayın:**
+
+```html
+<form method="POST" action="...">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  ...
+</form>
+```
+
+Token olmadan form 400 ile reddedilir. GET formları (örn. aday havuzu filtresi)
+token gerektirmez.
+
 ## Bilinen sorunlar
 
 - **PDF indirme çalışmıyor.** `requirements.txt` reportlab sürümünü
@@ -214,6 +240,15 @@ Aynı işi yönetici arayüzünden de yapabilirsiniz: `/admin/kurumlar`.
   yazılmış olabilir. Şablon düzeltildi, ancak **mevcut hatalı kayıtlar
   veritabanında duruyor** ve bu öğrenciler bölüm filtresinde çıkmaz.
   Bir `UPDATE` ile temizlenmeleri gerekir.
+- **Depoda otomatik test yok.** Geliştirme sırasında kapsamlı testler
+  yazılıp çalıştırıldı (CSRF, yönetici onay akışı, sıralama/filtreleme,
+  form kaydetme) ancak bunlar projeye eklenmedi. Yeni gelen bir geliştirici
+  "bu kod çalışıyor mu" sorusunu kodla cevaplayamaz.
+- **Uygulama logu yok.** Kimin ne zaman giriş yaptığı, hangi kurumun hangi
+  CV'yi görüntülediği kayıt altına alınmıyor. Kişisel veri işleyen bir
+  sistemde erişim kaydı tutmak beklenir.
+- **`app.py` 900+ satır.** Route'lar, hata sayfaları, yönetici işlemleri ve
+  CLI komutları tek dosyada. Flask blueprint'leri ile bölünmesi gerekir.
 - **Onay kaydı geçmiş tutmaz.** `approved_at` / `approved_by` yalnızca
   **mevcut** onayı tarif eder; erişim kaldırılınca temizlenir. Her onay ve
   iptal hareketinin geçmişi isteniyorsa ayrı bir kayıt tablosu gerekir.

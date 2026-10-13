@@ -39,6 +39,7 @@
             </td>
             <td class="col-actions">
               <form method="POST" action="{{ url_for('admin_approve_company', company_id=c.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-primary btn-sm" type="submit">Onayla</button>
               </form>
             </td>
@@ -97,6 +98,7 @@
                  atar; yanlışlıkla tıklamaya karşı onay sorulur. #}
               <form method="POST" action="{{ url_for('admin_revoke_company', company_id=c.id) }}"
                     data-confirm="{{ c.company_name }} kurumunun aday havuzuna erişimi kaldırılsın mı?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-outline btn-sm" type="submit">Erişimi kaldır</button>
               </form>
             </td>

@@ -15,6 +15,7 @@ from werkzeug.utils import secure_filename
 from xhtml2pdf import pisa
 
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 from models import db, User, Education, Experience, Certificate, Project, Department
 
@@ -42,6 +43,18 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = TRANSCRIPT_FOLDER
 app.config["PHOTO_FOLDER"] = PHOTO_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
+
+# CSRF (siteler arasi istek sahteciligi) korumasi.
+#
+# Koruma olmadan, giris yapmis bir kullanici kotu niyetli bir sayfayi
+# ziyaret ettiginde o sayfa onun adina bu siteye POST gonderebilir:
+# yonetici farkinda olmadan bir kurumu onaylayabilir, ogrenci CV'si
+# degistirilebilirdi. CSRFProtect her POST/PUT/DELETE istegine gizli bir
+# token sartı koyar; token yalnizca bizim sayfalarimizda uretildigi icin
+# baska bir site bunu taklit edemez.
+#
+# Token sablonlara {{ csrf_token() }} ile gelir ve SECRET_KEY ile imzalanir.
+csrf = CSRFProtect(app)
 
 db.init_app(app)
 
@@ -132,6 +145,21 @@ def error_not_found(e):
     return _error_page(
         404, "Sayfa bulunamadı",
         "Aradığınız adres değişmiş ya da hiç var olmamış olabilir.",
+    )
+
+
+@app.errorhandler(CSRFError)
+def error_csrf(e):
+    """CSRF token eksik veya gecersiz.
+
+    Gercek bir saldiri olabilir; ama cok daha sik rastlanan sebep, formun
+    uzun sure acik kalip oturumun zaman asimina ugramasidir. Mesaj bu
+    yuzden sucgucu degil yol gosterici.
+    """
+    return _error_page(
+        400, "Form gönderilemedi",
+        "Güvenlik doğrulaması geçersiz. Form uzun süre açık kaldıysa oturumunuz "
+        "zaman aşımına uğramış olabilir. Sayfayı yenileyip tekrar deneyin.",
     )
 
 

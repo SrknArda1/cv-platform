@@ -17,6 +17,7 @@
   </header>
 
   <form method="POST" class="form-stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% block auth_fields %}{% endblock %}
     <button class="btn btn-primary btn-lg btn-block" type="submit">{% block auth_submit %}Gönder{% endblock %}</button>
   </form>

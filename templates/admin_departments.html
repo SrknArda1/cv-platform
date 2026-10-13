@@ -11,6 +11,7 @@
 </div>
 
 <form method="POST" class="toolbar">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="field toolbar-grow">
     <label class="label" for="name">Yeni bölüm adı</label>
     <input class="input" type="text" id="name" name="name" required
@@ -45,6 +46,7 @@
           {% else %}
             <form method="POST" action="{{ url_for('admin_delete_department', department_id=d.id) }}"
                   data-confirm="'{{ d.name }}' bölümü silinsin mi?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-outline btn-sm" type="submit">Sil</button>
             </form>
           {% endif %}

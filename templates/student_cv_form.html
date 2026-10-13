@@ -134,7 +134,7 @@
   </header>
 
   <form method="POST" enctype="multipart/form-data" data-guard-unsaved>
-
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="tabs" role="tablist">
       <button class="tab is-active" type="button" role="tab" aria-selected="true" id="tab-genel" aria-controls="panel-genel" data-tab-target="genel">Genel bilgiler</button>
       <button class="tab" type="button" role="tab" aria-selected="false" id="tab-egitim" aria-controls="panel-egitim" data-tab-target="egitim">Eğitim</button>
