@@ -120,6 +120,13 @@ kendiliğinden düzelir; JavaScript saymaz.
 - Kurum hesapları onaydan geçmeden giriş yapamaz
 - Yüklenen fotoğraf ve transkriptler giriş gerektirir
 - Durum değiştiren her işlem POST ve **CSRF token** ile korunur
+- **Giriş denemesi sınırı:** yönetici 5/dakika, öğrenci ve kurum 10/dakika.
+  Sınırsız deneme olsaydı bir betik dakikada binlerce şifre deneyebilirdi —
+  adresin tahmin edilebilir olması (`/admin/giris`) bu yüzden tek başına
+  risk değil, asıl engel budur
+- Oturum çerezi: `HttpOnly`, `SameSite=Lax`, dışa açık çalıştırmada `Secure`;
+  oturum ömrü 31 gün değil **8 saat**
+- Başarısız giriş denemeleri e-posta ve IP ile loglanır (sunucu çıktısında)
 - Dışa açık çalıştırmada (`FLASK_DEBUG=0`) `SECRET_KEY` verilmemişse uygulama
   başlamayı reddeder
 - Gerçek veritabanı ve yüklenen dosyalar ne git'e ne de sunucuya gider

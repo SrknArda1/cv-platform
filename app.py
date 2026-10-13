@@ -1,7 +1,7 @@
 import os
 from functools import wraps
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote
 import unicodedata
 import re
@@ -14,8 +14,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from xhtml2pdf import pisa
 
+import logging
+
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from models import db, User, Education, Experience, Certificate, Project, Department
 
@@ -44,6 +48,28 @@ app.config["UPLOAD_FOLDER"] = TRANSCRIPT_FOLDER
 app.config["PHOTO_FOLDER"] = PHOTO_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
 
+# --- Oturum cerezi sertlestirmesi ---
+#
+# HTTPONLY  : cerez JavaScript'ten okunamaz (XSS ile oturum calinmasini zorlastirir)
+# SECURE    : cerez yalnizca HTTPS uzerinden gonderilir. Yerelde http://127.0.0.1
+#             kullandigimiz icin sadece disa acik calistirmada (FLASK_DEBUG=0) acilir,
+#             aksi halde yerelde hic giris yapilamazdi.
+# SAMESITE  : baska bir siteden gelen isteklere cerez eklenmez; CSRF'e ikinci savunma.
+# LIFETIME  : oturum 31 gun degil 8 saat yasar. Yonetici bilgisayarini acik
+#             biraktiginda riskin suresini kisaltir.
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_DEBUG", "1") == "0"
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
+
+# Giris denemelerini goruntulemek icin basit log. Sunucu ciktisinda
+# (PythonAnywhere error log / fly logs) gorunur.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+guvenlik_log = logging.getLogger("guvenlik")
+
 # CSRF (siteler arasi istek sahteciligi) korumasi.
 #
 # Koruma olmadan, giris yapmis bir kullanici kotu niyetli bir sayfayi
@@ -55,6 +81,23 @@ app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
 #
 # Token sablonlara {{ csrf_token() }} ile gelir ve SECRET_KEY ile imzalanir.
 csrf = CSRFProtect(app)
+
+# --- Giris denemesi sinirlamasi (brute-force korumasi) ---
+#
+# Sinirlama olmadan bir betik dakikada binlerce sifre deneyebilir; zayif bir
+# sifre saniyeler icinde kirilir. Adresin gizli olmasi koruma degildir,
+# /admin/giris tahmin edilebilir bir adrestir. Asil engel budur.
+#
+# storage_uri="memory://": sayaclar surecin belleginde tutulur. Tek islemli
+# calistirmada (PythonAnywhere ucretsiz katman, gunicorn --workers 2) yeterli.
+# Cok sunuculu bir kuruluma gecilirse Redis'e alinmalidir, yoksa her sunucu
+# kendi sayacini tutar ve sinir etkisini kaybeder.
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri="memory://",
+    strategy="fixed-window",
+)
 
 db.init_app(app)
 
@@ -163,6 +206,15 @@ def error_csrf(e):
     )
 
 
+@app.errorhandler(429)
+def error_too_many_requests(e):
+    return _error_page(
+        429, "Çok fazla deneme",
+        "Arka arkaya çok sayıda giriş denemesi yapıldı. Güvenlik gereği bir "
+        "süre beklemeniz gerekiyor; birkaç dakika sonra tekrar deneyin.",
+    )
+
+
 @app.errorhandler(413)
 def error_too_large(e):
     return _error_page(
@@ -243,6 +295,7 @@ def student_register():
 
 
 @app.route("/student/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute; 40 per hour", methods=["POST"])
 def student_login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
@@ -253,6 +306,8 @@ def student_login():
             login_user(user)
             return redirect(url_for("student_dashboard"))
 
+        guvenlik_log.warning(
+            "Basarisiz ogrenci girisi: %s (IP: %s)", email, get_remote_address())
         flash("E-posta veya şifre hatalı.", "error")
         return redirect(url_for("student_login"))
 
@@ -378,6 +433,7 @@ def company_register():
     return render_template("company_register.html")
 
 @app.route("/company/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute; 40 per hour", methods=["POST"])
 def company_login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
@@ -392,6 +448,8 @@ def company_login():
             login_user(user)
             return redirect(url_for("company_dashboard"))
 
+        guvenlik_log.warning(
+            "Basarisiz kurum girisi: %s (IP: %s)", email, get_remote_address())
         flash("E-posta veya şifre hatalı.", "error")
         return redirect(url_for("company_login"))
 
@@ -578,7 +636,11 @@ def download_own_transcript():
 # yonetici olup butun ogrenci verisine erisebilirdi.
 
 
+# Yonetici girisi en dar sinira tabi: tek bir hesap var, mesru kullanici
+# gunde birkac kez giriyor. Saldirgan icin ise 5 deneme/dakika, sozluk
+# saldirisini pratikte imkansiz hale getirir.
 @app.route("/admin/giris", methods=["GET", "POST"])
+@limiter.limit("5 per minute; 20 per hour", methods=["POST"])
 def admin_login():
     if current_user.is_authenticated and current_user.role == "admin":
         return redirect(url_for("admin_companies"))
@@ -590,8 +652,13 @@ def admin_login():
         user = User.query.filter_by(email=email, role="admin").first()
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
+            guvenlik_log.info(
+                "Yonetici girisi: %s (IP: %s)", email, get_remote_address())
             return redirect(url_for("admin_companies"))
 
+        # Yonetici hesabina yonelik denemeler ayrica dikkat cekici
+        guvenlik_log.warning(
+            "BASARISIZ YONETICI GIRISI: %s (IP: %s)", email, get_remote_address())
         flash("E-posta veya şifre hatalı.", "error")
         return redirect(url_for("admin_login"))
 
