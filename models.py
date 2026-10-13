@@ -43,6 +43,32 @@ class User(UserMixin, db.Model):
         "User", remote_side=[id], foreign_keys=[approved_by_id], uselist=False
     )
 
+    # Başvuru reddi (kuruma ait)
+    #
+    # Kurum hesabının üç durumu var ve ikisi `is_approved` ile anlatılamaz:
+    #   bekliyor   -> is_approved=False, rejected_at=None
+    #   onaylı     -> is_approved=True
+    #   reddedildi -> is_approved=False, rejected_at dolu
+    #
+    # Reddi ayrı tutmanın sebebi: hesabı silmek yerine işaretlemek, kuruma
+    # net bir cevap verir (sonsuza kadar "bekleniyor" görmez) ve kararın
+    # kaydı kalır. Yeniden değerlendirilebilir.
+    rejected_at = db.Column(db.DateTime)
+    rejected_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    rejected_by = db.relationship(
+        "User", remote_side=[id], foreign_keys=[rejected_by_id], uselist=False
+    )
+    rejection_reason = db.Column(db.String(500))
+
+    @property
+    def basvuru_durumu(self):
+        """'onayli' | 'reddedildi' | 'bekliyor' — şablonlarda kullanılır."""
+        if self.is_approved:
+            return "onayli"
+        if self.rejected_at:
+            return "reddedildi"
+        return "bekliyor"
+
     # Transkript doğrulama (öğrenciye ait)
     #
     # Herkes herhangi bir PDF yükleyip "transkriptim" diyebilir. Koordinatör

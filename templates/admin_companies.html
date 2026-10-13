@@ -9,7 +9,8 @@
   </div>
   <p class="count">
     {% if pending %}<strong>{{ pending|length }}</strong> onay bekliyor &middot; {% endif %}
-    <strong>{{ approved|length }}</strong> onaylı kurum
+    <strong>{{ approved|length }}</strong> onaylı
+    {%- if rejected %} &middot; <strong>{{ rejected|length }}</strong> reddedilmiş{% endif %}
   </p>
 </div>
 
@@ -41,6 +42,15 @@
               <form method="POST" action="{{ url_for('admin_approve_company', company_id=c.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-primary btn-sm" type="submit">Onayla</button>
+              </form>
+              {# Sebep isteğe bağlı; yazılırsa kurum giriş denediğinde görür. #}
+              <form class="reject-form" method="POST"
+                    action="{{ url_for('admin_reject_company', company_id=c.id) }}"
+                    data-confirm="{{ c.company_name }} başvurusu reddedilecek. Kurum giriş denediğinde bunu görecek.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input class="input reject-reason" type="text" name="reason"
+                       placeholder="Gerekçe (isteğe bağlı)" maxlength="500">
+                <button class="btn btn-outline btn-sm" type="submit">Reddet</button>
               </form>
             </td>
           </tr>
@@ -114,4 +124,56 @@
     </div>
   {% endif %}
 </section>
+
+{% if rejected %}
+<section class="group">
+  <h2 class="group-label">Reddedilen başvurular</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Kurum</th>
+          <th>E-posta</th>
+          <th>Gerekçe</th>
+          <th>Reddeden</th>
+          <th><span class="hidden">İşlem</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in rejected %}
+        <tr>
+          <td data-label="Kurum">
+            <span class="who-name">{{ c.company_name or '—' }}</span>
+            <span class="state state-no">REDDEDİLDİ</span>
+          </td>
+          <td data-label="E-posta"><span class="who-mail">{{ c.email }}</span></td>
+          <td data-label="Gerekçe">
+            {% if c.rejection_reason %}
+              {{ c.rejection_reason }}
+            {% else %}
+              <span class="state state-no">BELİRTİLMEMİŞ</span>
+            {% endif %}
+          </td>
+          <td data-label="Reddeden">
+            {% if c.rejected_by %}
+              <span class="who-name">{{ c.rejected_by.full_name or c.rejected_by.email }}</span>
+              <span class="entry-meta">{{ c.rejected_at.strftime('%d.%m.%Y') if c.rejected_at else '' }}</span>
+            {% else %}
+              <span class="state state-no">—</span>
+            {% endif %}
+          </td>
+          <td class="col-actions">
+            {# Yeniden değerlendirme: hesap tekrar "bekliyor" durumuna döner. #}
+            <form method="POST" action="{{ url_for('admin_reconsider_company', company_id=c.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline btn-sm" type="submit">Yeniden değerlendir</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

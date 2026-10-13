@@ -1521,6 +1521,15 @@ a.state-yes:hover { text-decoration: underline; text-underline-offset: 2px; }
 /* Tablo içindeki aksiyon formu satırı bozmasın */
 .col-actions form { display: inline-block; margin: 0; }
 
+/* Reddetme formu: gerekçe alanı ile buton yan yana, dar */
+.reject-form { display: inline-flex; align-items: center; gap: var(--s-2); margin-left: var(--s-2); }
+.reject-reason { width: 170px; height: 28px; font-size: var(--t-sm); }
+
+@media (max-width: 760px) {
+  .reject-form { display: flex; width: 100%; margin: var(--s-2) 0 0; }
+  .reject-reason { flex: 1; width: auto; }
+}
+
 /* Oran çubuğu (bölüm dağılımı) */
 .bar {
   display: block;

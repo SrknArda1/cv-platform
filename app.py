@@ -455,6 +455,13 @@ def company_login():
         user = User.query.filter_by(email=email, role="company").first()
 
         if user and check_password_hash(user.password_hash, password):
+            if user.basvuru_durumu == "reddedildi":
+                mesaj = "Başvurunuz kampüs koordinatörü tarafından reddedildi."
+                if user.rejection_reason:
+                    mesaj += f" Gerekçe: {user.rejection_reason}"
+                flash(mesaj, "error")
+                return redirect(url_for("company_login"))
+
             if not user.is_approved:
                 flash("Hesabınız henüz onaylanmadı. Kampüs koordinatörünün onayını bekleyiniz.", "error")
                 return redirect(url_for("company_login"))
@@ -689,10 +696,11 @@ def admin_login():
 @role_required("admin")
 def admin_companies():
     companies = User.query.filter_by(role="company").order_by(User.created_at.desc()).all()
-    pending = [c for c in companies if not c.is_approved]
-    approved = [c for c in companies if c.is_approved]
+    pending = [c for c in companies if c.basvuru_durumu == "bekliyor"]
+    approved = [c for c in companies if c.basvuru_durumu == "onayli"]
+    rejected = [c for c in companies if c.basvuru_durumu == "reddedildi"]
     return render_template(
-        "admin_companies.html", pending=pending, approved=approved
+        "admin_companies.html", pending=pending, approved=approved, rejected=rejected
     )
 
 
@@ -704,8 +712,51 @@ def admin_approve_company(company_id):
     company.is_approved = True
     company.approved_at = datetime.now()
     company.approved_by_id = current_user.id
+    # Daha once reddedilmisse o kayit silinir: hesap artik onayli.
+    company.rejected_at = None
+    company.rejected_by_id = None
+    company.rejection_reason = None
     db.session.commit()
     flash(f"{company.company_name} onaylandı. Artık aday havuzuna erişebilir.", "success")
+    return redirect(url_for("admin_companies"))
+
+
+@app.route("/admin/kurumlar/<int:company_id>/reddet", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_reject_company(company_id):
+    """Basvuruyu reddeder.
+
+    Hesap SILINMEZ, "reddedildi" olarak isaretlenir. Boylece kurum giris
+    denediginde sonsuza kadar "onay bekleniyor" gormek yerine net bir
+    cevap alir, karar kayda geçer ve gerekirse yeniden degerlendirilir.
+    """
+    company = User.query.filter_by(id=company_id, role="company").first_or_404()
+    sebep = request.form.get("reason", "").strip()[:500]
+
+    company.is_approved = False
+    company.rejected_at = datetime.now()
+    company.rejected_by_id = current_user.id
+    company.rejection_reason = sebep or None
+    db.session.commit()
+
+    guvenlik_log.info("Kurum basvurusu reddedildi: %s, yonetici=%s",
+                      company.email, current_user.email)
+    flash(f"{company.company_name} başvurusu reddedildi.", "success")
+    return redirect(url_for("admin_companies"))
+
+
+@app.route("/admin/kurumlar/<int:company_id>/yeniden", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_reconsider_company(company_id):
+    """Reddedilen basvuruyu tekrar 'bekliyor' durumuna alir."""
+    company = User.query.filter_by(id=company_id, role="company").first_or_404()
+    company.rejected_at = None
+    company.rejected_by_id = None
+    company.rejection_reason = None
+    db.session.commit()
+    flash(f"{company.company_name} yeniden değerlendirmeye alındı.", "success")
     return redirect(url_for("admin_companies"))
 
 
@@ -740,7 +791,8 @@ def admin_overview():
         "transkript": sum(1 for s in students if s.transcript_filename),
         "dogrulanmis": sum(1 for s in students if s.transcript_verified),
         "kurum_onayli": sum(1 for c in companies if c.is_approved),
-        "kurum_bekleyen": sum(1 for c in companies if not c.is_approved),
+        "kurum_bekleyen": sum(1 for c in companies if c.basvuru_durumu == "bekliyor"),
+        "kurum_reddedilen": sum(1 for c in companies if c.basvuru_durumu == "reddedildi"),
     }
 
     # Bolum dagilimi: hangi bolumde kac ogrenci, en kalabaliktan baslayarak
