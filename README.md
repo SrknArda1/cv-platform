@@ -136,6 +136,12 @@ Bölümler `Department` tablosunda tutulur. İlk açılışta `seed_departments(
 yönetici `/admin/bolumler` ekranından ekleyip silebilir (kod değişikliği
 gerekmez).
 
+## Dağıtım
+
+Sunucuya kurulum adımları ayrı bir dosyada: **[DAGITIM.md](DAGITIM.md)**
+(PythonAnywhere ve Fly.io için adım adım, ve gerçek kişisel verinin neden
+sunucuya hiç gitmediği).
+
 ## Kurulum
 
 ```bash
