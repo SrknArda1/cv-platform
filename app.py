@@ -140,6 +140,27 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
+# Kayit formlari icin ortak dogrulama kurallari.
+#
+# Tarayicinin type="email" kontrolu yeterli degil: HTML5 "ad@gmail" gibi
+# TLD'siz adresleri GECERLI sayar. Canli sistemde boyle bir kayit olustu.
+# Sunucu tarafinda da kontrol sart -- istemci kontrolu her zaman atlanabilir.
+EPOSTA_DESENI = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
+
+SIFRE_EN_AZ = 6
+
+
+def kayit_dogrula(email, sifre, sifre_tekrar):
+    """Kayit alanlarini dogrular; sorun varsa mesaji, yoksa None doner."""
+    if not EPOSTA_DESENI.match(email):
+        return "Geçerli bir e-posta adresi girin (örnek: ad.soyad@ornek.com)."
+    if len(sifre) < SIFRE_EN_AZ:
+        return f"Şifre en az {SIFRE_EN_AZ} karakter olmalı."
+    if sifre != sifre_tekrar:
+        return "Şifreler eşleşmiyor. Lütfen ikisini de kontrol edin."
+    return None
+
+
 def dosyayi_sil(klasor, dosya_adi):
     """Yuklenen bir dosyayi diskten siler.
 
@@ -313,15 +334,24 @@ def student_register():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        password2 = request.form.get("password2", "")
         full_name = request.form.get("full_name", "").strip()
 
+        # Hata durumunda girilen bilgiler kaybolmasin diye sayfa yeniden
+        # cizilir (yonlendirme yapilmaz); sifreler bilerek tasinmaz.
+        def hatayla_don(mesaj):
+            flash(mesaj, "error")
+            return render_template("student_register.html", girilen=request.form), 400
+
         if not email or not password or not full_name:
-            flash("Lütfen tüm alanları doldurun.", "error")
-            return redirect(url_for("student_register"))
+            return hatayla_don("Lütfen tüm alanları doldurun.")
+
+        hata = kayit_dogrula(email, password, password2)
+        if hata:
+            return hatayla_don(hata)
 
         if User.query.filter_by(email=email).first():
-            flash("Bu e-posta ile zaten bir hesap var.", "error")
-            return redirect(url_for("student_register"))
+            return hatayla_don("Bu e-posta ile zaten bir hesap var.")
 
         user = User(
             email=email,
@@ -478,16 +508,23 @@ def company_register():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        password2 = request.form.get("password2", "")
         company_name = request.form.get("company_name", "").strip()
         contact_person = request.form.get("contact_person", "").strip()
 
+        def hatayla_don(mesaj):
+            flash(mesaj, "error")
+            return render_template("company_register.html", girilen=request.form), 400
+
         if not email or not password or not company_name:
-            flash("Lütfen tüm alanları doldurun.", "error")
-            return redirect(url_for("company_register"))
+            return hatayla_don("Lütfen tüm alanları doldurun.")
+
+        hata = kayit_dogrula(email, password, password2)
+        if hata:
+            return hatayla_don(hata)
 
         if User.query.filter_by(email=email).first():
-            flash("Bu e-posta ile zaten bir hesap var.", "error")
-            return redirect(url_for("company_register"))
+            return hatayla_don("Bu e-posta ile zaten bir hesap var.")
 
         user = User(
             email=email,

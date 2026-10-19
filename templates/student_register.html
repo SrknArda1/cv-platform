@@ -7,18 +7,32 @@
 {% block auth_submit %}Kayıt ol{% endblock %}
 
 {% block auth_fields %}
+  {# `girilen`: doğrulama hatasında kullanıcı her şeyi baştan yazmasın diye
+     gönderilen değerler geri verilir. Şifreler bilerek taşınmaz. #}
   <div class="field">
     <label class="label" for="full_name">Ad soyad</label>
-    <input class="input input-lg" type="text" id="full_name" name="full_name" required autocomplete="name" autofocus>
+    <input class="input input-lg" type="text" id="full_name" name="full_name"
+           value="{{ girilen.full_name if girilen else '' }}"
+           required autocomplete="name" autofocus>
   </div>
   <div class="field">
     <label class="label" for="email">E-posta</label>
-    <input class="input input-lg" type="email" id="email" name="email" required autocomplete="email">
+    <input class="input input-lg" type="email" id="email" name="email"
+           value="{{ girilen.email if girilen else '' }}"
+           required autocomplete="email">
+    <span class="field-hint">Örnek: ad.soyad@ornek.com</span>
   </div>
   <div class="field">
     <label class="label" for="password">Şifre</label>
-    <input class="input input-lg" type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
+    <input class="input input-lg" type="password" id="password" name="password"
+           required minlength="6" autocomplete="new-password">
     <span class="field-hint">En az 6 karakter.</span>
+  </div>
+  <div class="field">
+    <label class="label" for="password2">Şifre (tekrar)</label>
+    <input class="input input-lg" type="password" id="password2" name="password2"
+           required minlength="6" autocomplete="new-password">
+    <span class="field-hint">Doğru yazdığınızdan emin olmak için aynısını tekrar girin.</span>
   </div>
 {% endblock %}
 
