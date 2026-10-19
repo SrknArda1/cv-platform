@@ -24,9 +24,12 @@
      'department': selected_department or none,
      'has_transcript': '1' if only_with_transcript else none,
      'verified': '1' if only_verified else none,
+     'skill': skill or none,
+     'focus': '1' if use_focus else none,
      'min_completion': min_completion or none
    } %}
-{% set is_filtered = q or selected_department or only_with_transcript or only_verified or min_completion %}
+{% set is_filtered = q or selected_department or only_with_transcript or only_verified
+                     or min_completion or skill or use_focus %}
 
 <div class="page-head">
   <div>
@@ -38,6 +41,14 @@
     {%- if is_filtered %} &middot; {{ total_students }} kayıt içinden filtrelendi{% endif -%}
   </p>
 </div>
+
+{% if not current_user.focus_list %}
+  <p class="overview-note">
+    Kurum profilinize <strong>aradığınız yetkinlikleri</strong> yazarsanız havuzu tek tıkla
+    süzebilirsiniz.
+    <a class="link-accent" href="{{ url_for('company_profile') }}">Profili doldur</a>
+  </p>
+{% endif %}
 
 <form method="GET" class="toolbar">
   <div class="field toolbar-grow">
@@ -54,6 +65,12 @@
         <option value="{{ dep.name }}" {{ 'selected' if selected_department == dep.name }}>{{ dep.name }}</option>
       {% endfor %}
     </select>
+  </div>
+
+  <div class="field toolbar-fixed">
+    <label class="label" for="f-skill">Yetkinlik</label>
+    <input class="input" type="text" id="f-skill" name="skill" value="{{ skill }}"
+           placeholder="Örn: Network">
   </div>
 
   <div class="field toolbar-fixed">
@@ -74,6 +91,14 @@
     <input type="checkbox" name="verified" value="1" {{ 'checked' if only_verified }}>
     Sadece doğrulanmış
   </label>
+
+  {% if current_user.focus_list %}
+    {# Kurum profilindeki aranan yetkinliklerden en az birine sahip adaylar #}
+    <label class="check" title="{{ current_user.focus_skills }}">
+      <input type="checkbox" name="focus" value="1" {{ 'checked' if use_focus }}>
+      Aradıklarıma uyanlar
+    </label>
+  {% endif %}
 
   {#
     Sıralama denetimi. Masaüstünde CSS ile gizlidir — orada sıralama kolon
@@ -113,8 +138,8 @@
 </form>
 
 {% if students %}
-<div class="table-wrap">
-  <table class="table">
+<div class="table-wrap table-wide-wrap">
+  <table class="table table-wide">
     <thead>
       <tr>
         <th>{{ sort_th('name', 'Aday', sort, direction, base) }}</th>

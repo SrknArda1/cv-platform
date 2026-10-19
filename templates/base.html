@@ -45,6 +45,8 @@
         {% else %}
           <a href="{{ url_for('company_dashboard') }}"
              class="nav-link {{ 'is-active' if request.endpoint in ['company_dashboard', 'student_detail'] }}">Aday Havuzu</a>
+          <a href="{{ url_for('company_profile') }}"
+             class="nav-link {{ 'is-active' if request.endpoint == 'company_profile' }}">Profilim</a>
         {% endif %}
 
         <a href="{{ url_for('messages_inbox') }}"
@@ -106,6 +108,8 @@
       {% else %}
         <a href="{{ url_for('company_dashboard') }}"
            class="{{ 'is-active' if request.endpoint in ['company_dashboard', 'student_detail'] }}">Aday Havuzu</a>
+        <a href="{{ url_for('company_profile') }}"
+           class="{{ 'is-active' if request.endpoint == 'company_profile' }}">Profilim</a>
       {% endif %}
       <a href="{{ url_for('messages_inbox') }}"
          class="{{ 'is-active' if request.endpoint in ['messages_inbox', 'messages_thread'] }}">Mesajlar{% if okunmamis_mesaj %}<span class="badge">{{ okunmamis_mesaj }}</span>{% endif %}</a>

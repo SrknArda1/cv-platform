@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Kurum Profili — Kariyer Portalı{% endblock %}
+
+{% block content %}
+<div class="docbar">
+  <a class="backlink" href="{{ url_for('company_dashboard') }}">&larr; Aday Havuzu</a>
+</div>
+
+<article class="doc">
+  <header class="doc-head">
+    <div class="doc-head-text">
+      <h1 class="doc-name">Kurum Profili</h1>
+      <p class="doc-dept">Aradığınız yetkinlikleri yazın, aday havuzunu tek tıkla ona göre süzün.</p>
+    </div>
+  </header>
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <section class="doc-section">
+      <h2 class="doc-section-label">Künye</h2>
+      <div class="formgrid">
+        <div class="field col-6">
+          <label class="label" for="company_name">Kurum adı</label>
+          <input class="input input-lg" type="text" id="company_name" name="company_name"
+                 value="{{ current_user.company_name or '' }}" required>
+        </div>
+        <div class="field col-6">
+          <label class="label" for="contact_person">Yetkili kişi</label>
+          <input class="input input-lg" type="text" id="contact_person" name="contact_person"
+                 value="{{ current_user.contact_person or '' }}">
+        </div>
+        <div class="field col-6">
+          <label class="label" for="sector">Faaliyet alanı</label>
+          <input class="input input-lg" type="text" id="sector" name="sector"
+                 value="{{ current_user.sector or '' }}" maxlength="160"
+                 placeholder="Örn: Fiber altyapı ve ağ hizmetleri">
+        </div>
+        <div class="field col-6">
+          <label class="label" for="website">Web sitesi</label>
+          <input class="input input-lg" type="url" id="website" name="website"
+                 value="{{ current_user.website or '' }}" maxlength="255"
+                 placeholder="https://...">
+        </div>
+      </div>
+    </section>
+
+    <section class="doc-section">
+      <h2 class="doc-section-label">Aradığınız yetkinlikler</h2>
+      <div class="formgrid">
+        <div class="field col-12">
+          <label class="label" for="focus_skills">Yetkinlikler</label>
+          <input class="input input-lg" type="text" id="focus_skills" name="focus_skills"
+                 value="{{ current_user.focus_skills or '' }}" maxlength="400"
+                 placeholder="Network, Linux, Fiber Optik">
+          <span class="field-hint">
+            Virgülle ayırın. Aday havuzunda <strong>“Aradıklarıma uyanlar”</strong> kutusunu
+            işaretlediğinizde, bu yetkinliklerden <strong>en az birine</strong> sahip adaylar listelenir.
+          </span>
+        </div>
+      </div>
+
+      {% if current_user.focus_list %}
+        <p class="taglist">
+          {% for y in current_user.focus_list %}<span>{{ y }}</span>{% endfor %}
+        </p>
+      {% endif %}
+    </section>
+
+    <section class="doc-section">
+      <h2 class="doc-section-label">Kurum hakkında</h2>
+      <div class="formgrid">
+        <div class="field col-12">
+          <label class="label" for="about">Tanıtım</label>
+          <textarea class="textarea" id="about" name="about" rows="4"
+                    placeholder="Kurumunuzu ve aradığınız adayı kısaca tanıtın...">{{ current_user.about or '' }}</textarea>
+          <span class="field-hint">Öğrencilere mesaj gönderdiğinizde kim olduğunuzu anlamalarına yardımcı olur.</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <span class="field-hint">Onay durumunuz:
+        {%- if current_user.is_approved %} onaylı{% else %} onay bekliyor{% endif -%}
+      </span>
+      <button class="btn btn-primary btn-lg" type="submit">Kaydet</button>
+    </div>
+  </form>
+</article>
+{% endblock %}

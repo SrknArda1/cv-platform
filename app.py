@@ -478,6 +478,41 @@ def company_login():
     return render_template("company_login.html")
 
 
+@app.route("/company/profil", methods=["GET", "POST"])
+@login_required
+@role_required("company")
+def company_profile():
+    """Kurumun kendi profili.
+
+    `focus_skills` burada doldurulur ve aday havuzunda tek tikla filtreye
+    donusur: kurum "Network, Linux" yazdiysa, havuzda bu yetkinliklere
+    sahip adaylari dogrudan suzebilir. Bolum bazli aramadan cok daha dar
+    bir eslestirme saglar.
+    """
+    if request.method == "POST":
+        current_user.company_name = request.form.get("company_name", "").strip() or current_user.company_name
+        current_user.contact_person = request.form.get("contact_person", "").strip() or None
+        current_user.sector = request.form.get("sector", "").strip()[:160] or None
+        current_user.website = request.form.get("website", "").strip()[:255] or None
+        current_user.about = request.form.get("about", "").strip() or None
+
+        # Yetkinlikleri normalize et: fazla bosluk ve tekrarlari temizle
+        ham = request.form.get("focus_skills", "")
+        temiz, gorulen = [], set()
+        for parca in ham.split(","):
+            parca = parca.strip()
+            if parca and parca.casefold() not in gorulen:
+                gorulen.add(parca.casefold())
+                temiz.append(parca)
+        current_user.focus_skills = ", ".join(temiz)[:400] or None
+
+        db.session.commit()
+        flash("Kurum profiliniz güncellendi.", "success")
+        return redirect(url_for("company_profile"))
+
+    return render_template("company_profile.html")
+
+
 # ---------- Kurum: aday havuzu & İndirme ----------
 
 # Aday havuzunda sıralanabilir kolonlar.
@@ -510,6 +545,10 @@ def company_dashboard():
     q = request.args.get("q", "").strip()
     only_with_transcript = request.args.get("has_transcript") == "1"
     only_verified = request.args.get("verified") == "1"
+    # Yetkinlik filtresi: "Network" gibi tek bir beceri, ya da kurumun
+    # profilindeki aranan yetkinliklerin tamami ("odak" modu).
+    skill = request.args.get("skill", "").strip()
+    use_focus = request.args.get("focus") == "1"
 
     try:
         min_completion = int(request.args.get("min_completion", 0))
@@ -538,6 +577,16 @@ def company_dashboard():
         query = query.filter(User.transcript_filename.isnot(None))
     if only_verified:
         query = query.filter(User.transcript_verified.is_(True))
+
+    if skill:
+        query = query.filter(User.skills.ilike(f"%{skill}%"))
+    elif use_focus and current_user.focus_list:
+        # Kurumun aradigi yetkinliklerden EN AZ BIRINE sahip adaylar.
+        # "hepsine sahip" degil: tek bir eksik beceri iyi bir adayi
+        # listeden dusurur, bu da aramayi fazla daraltirdi.
+        query = query.filter(db.or_(
+            *[User.skills.ilike(f"%{y}%") for y in current_user.focus_list]
+        ))
 
     students = query.all()
     total_students = User.query.filter_by(role="student").count()
@@ -574,6 +623,8 @@ def company_dashboard():
         q=q,
         only_with_transcript=only_with_transcript,
         only_verified=only_verified,
+        skill=skill,
+        use_focus=use_focus,
         min_completion=min_completion,
         sort=sort,
         direction=direction,

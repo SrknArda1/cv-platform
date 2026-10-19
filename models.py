@@ -35,6 +35,25 @@ class User(UserMixin, db.Model):
     contact_person = db.Column(db.String(255))
     is_approved = db.Column(db.Boolean, default=False)
 
+    # Kurum profili
+    #
+    # sector: "Fiber altyapı", "Yazılım" gibi serbest metin — kurumun ne iş
+    #   yaptığı. Öğrenciye kimin yazdığını anlaması için gösterilir.
+    # focus_skills: virgülle ayrılmış aranan yetkinlikler ("Network, Linux").
+    #   Aday havuzunda tek tıkla bu yetkinliklere göre filtre yapılmasını
+    #   sağlar — bölüm bazlı aramadan çok daha dar bir eşleştirme.
+    sector = db.Column(db.String(160))
+    focus_skills = db.Column(db.String(400))
+    about = db.Column(db.Text)
+    website = db.Column(db.String(255))
+
+    @property
+    def focus_list(self):
+        """focus_skills metnini temiz bir listeye çevirir."""
+        if not self.focus_skills:
+            return []
+        return [p.strip() for p in self.focus_skills.split(",") if p.strip()]
+
     # Onay kaydı: kurum hesabı öğrencilerin kişisel verisine erişim kazandığı
     # için bu kararın kim tarafından, ne zaman verildiği kayda geçer.
     approved_at = db.Column(db.DateTime)
