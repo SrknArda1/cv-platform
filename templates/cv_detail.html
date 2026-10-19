@@ -22,6 +22,8 @@
       <span class="btn btn-disabled">Transkript yok</span>
     {% endif %}
     {% if not is_own_preview %}
+      {# Adayla iletişime geçmenin ana giriş noktası #}
+      <a class="btn btn-outline" href="{{ url_for('messages_thread', user_id=student.id) }}">Mesaj gönder</a>
       <a class="btn btn-outline" href="{{ url_for('download_student_cv_pdf', student_id=student.id) }}">PDF</a>
     {% endif %}
   </div>

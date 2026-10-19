@@ -102,6 +102,7 @@
 
         <td class="col-actions">
           <a class="btn-cell" href="{{ url_for('student_detail', student_id=s.id) }}">CV</a>
+          <a class="btn-cell" href="{{ url_for('messages_thread', user_id=s.id) }}">MESAJ</a>
 
           {% if s.transcript_filename %}
             <a class="btn-cell" href="{{ url_for('download_transcript', student_id=s.id) }}"

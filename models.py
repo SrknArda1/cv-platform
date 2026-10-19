@@ -182,6 +182,35 @@ class User(UserMixin, db.Model):
         return self.profile_completion() >= 85
 
 
+class Message(db.Model):
+    """İki kullanıcı arasındaki tek bir mesaj.
+
+    Ayrı bir "konuşma" tablosu yok: iki kişi arasındaki tüm mesajlar bir
+    konuşma sayılır. Bu ölçekte fazladan tablo karmaşa getirir, sorgular
+    da basit kalır (gönderen/alıcı çiftine bak).
+
+    Kim kime yazabilir kuralı app.py'deki mesaj_atabilir_mi() içinde;
+    burada tutulmaz çünkü karar rollere ve onay durumuna bakıyor.
+    """
+    __tablename__ = "messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    # Alıcı mesajı açtığı an doldurulur. None = okunmamış.
+    read_at = db.Column(db.DateTime)
+
+    sender = db.relationship("User", foreign_keys=[sender_id])
+    recipient = db.relationship("User", foreign_keys=[recipient_id])
+
+    def karsi_taraf(self, user_id):
+        """Verilen kullanıcıya göre konuşmanın diğer tarafı."""
+        return self.recipient if self.sender_id == user_id else self.sender
+
+
 class Education(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)

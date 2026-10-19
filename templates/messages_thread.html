@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ diger.full_name or diger.company_name }} — Mesajlar{% endblock %}
+
+{% block content %}
+<div class="docbar">
+  <a class="backlink" href="{{ url_for('messages_inbox') }}">&larr; Gelen kutusu</a>
+  {% if diger.role == 'student' and current_user.role in ['company', 'admin'] %}
+    <div class="docbar-actions">
+      <a class="btn btn-outline" href="{{ url_for('student_detail', student_id=diger.id) }}">CV'yi aç</a>
+    </div>
+  {% endif %}
+</div>
+
+<article class="doc doc-chat">
+  <header class="chat-head">
+    <span class="portrait portrait-md">
+      {% if diger.photo_filename and current_user.role != 'student' %}
+        <img src="{{ url_for('uploaded_photo', filename=diger.photo_filename) }}" alt="">
+      {% else %}{{ diger.initials }}{% endif %}
+    </span>
+    <span class="who-text">
+      <span class="chat-name">{{ diger.full_name or diger.company_name or diger.email }}</span>
+      <span class="who-mail">
+        {%- if diger.role == 'admin' %}Kampüs koordinatörü
+        {%- elif diger.role == 'company' %}Kurum{% if diger.contact_person %} &middot; {{ diger.contact_person }}{% endif %}
+        {%- else %}Öğrenci{% if diger.department %} &middot; {{ diger.department }}{% endif %}{% endif -%}
+      </span>
+    </span>
+  </header>
+
+  <div class="chat-log">
+    {% if mesajlar %}
+      {% set ns = namespace(gun='') %}
+      {% for m in mesajlar %}
+        {% set gun = m.created_at.strftime('%d.%m.%Y') if m.created_at else '' %}
+        {% if gun != ns.gun %}
+          {% set ns.gun = gun %}
+          <div class="chat-day">{{ gun }}</div>
+        {% endif %}
+        {# Gönderen bize göre sağda, karşı taraf solda #}
+        <div class="bubble {{ 'is-mine' if m.sender_id == current_user.id else 'is-theirs' }}">
+          <p class="bubble-body">{{ m.body }}</p>
+          <span class="bubble-time">
+            {{ m.created_at.strftime('%H:%M') if m.created_at else '' }}
+            {%- if m.sender_id == current_user.id and m.read_at %} &middot; okundu{% endif -%}
+          </span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="doc-empty">Henüz mesaj yok. İlk mesajı siz yazın.</p>
+    {% endif %}
+  </div>
+
+  <form class="chat-form" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <textarea class="textarea" name="body" rows="3" maxlength="4000" required
+              placeholder="Mesajınızı yazın..." autofocus></textarea>
+    <div class="chat-form-actions">
+      <span class="field-hint">En fazla 4000 karakter.</span>
+      <button class="btn btn-primary" type="submit">Gönder</button>
+    </div>
+  </form>
+</article>
+{% endblock %}

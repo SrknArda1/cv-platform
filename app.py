@@ -21,7 +21,8 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from models import db, User, Education, Experience, Certificate, Project, Department
+from models import (db, User, Education, Experience, Certificate, Project,
+                    Department, Message)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -649,6 +650,119 @@ def download_own_transcript():
     if not current_user.transcript_filename:
         abort(404)
     return send_from_directory(app.config["UPLOAD_FOLDER"], current_user.transcript_filename)
+
+
+# ---------- Mesajlaşma ----------
+#
+# Kim kime BASLATABILIR:
+#   kurum  -> ogrenci    (onayli kurum, bir adayi gorup iletisime gecer)
+#   herkes -> yonetici   (destek)
+#   yonetici -> herkes
+#   ogrenci -> kurum     yalnizca CEVAP olarak (once kurum yazmis olmali)
+#
+# Ogrencinin kuruma kendiliginden yazamamasinin sebebi: ogrenci kurum
+# listesini zaten gormuyor, ve bu kisit istenmeyen mesaji bastan engelliyor.
+
+
+def mesaj_atabilir_mi(gonderen, alici):
+    """gonderen, alici'ya YENI bir konusma baslatabilir mi?"""
+    if gonderen.id == alici.id:
+        return False
+
+    # Yonetici her iki yonde de serbest (destek kanali)
+    if gonderen.role == "admin" or alici.role == "admin":
+        return True
+
+    # Kurum -> ogrenci: kurumun onayli olmasi sart
+    if gonderen.role == "company" and alici.role == "student":
+        return gonderen.is_approved
+
+    # Ogrenci -> kurum: yalnizca o kurum daha once yazmissa (cevap)
+    if gonderen.role == "student" and alici.role == "company":
+        return Message.query.filter_by(
+            sender_id=alici.id, recipient_id=gonderen.id
+        ).first() is not None
+
+    return False
+
+
+def konusma_sorgusu(a_id, b_id):
+    """Iki kullanici arasindaki tum mesajlar (her iki yon)."""
+    return Message.query.filter(
+        db.or_(
+            db.and_(Message.sender_id == a_id, Message.recipient_id == b_id),
+            db.and_(Message.sender_id == b_id, Message.recipient_id == a_id),
+        )
+    )
+
+
+@app.context_processor
+def inject_unread():
+    """Üst menüdeki okunmamış sayısı. Her şablonda kullanılabilir."""
+    if not current_user.is_authenticated:
+        return {"okunmamis_mesaj": 0}
+    return {"okunmamis_mesaj": Message.query.filter_by(
+        recipient_id=current_user.id, read_at=None).count()}
+
+
+@app.route("/mesajlar")
+@login_required
+def messages_inbox():
+    uid = current_user.id
+    hepsi = (Message.query
+             .filter(db.or_(Message.sender_id == uid, Message.recipient_id == uid))
+             .order_by(Message.created_at.desc())
+             .all())
+
+    # En yeniden eskiye gidildigi icin her kisinin ILK gorulen mesaji son mesajidir
+    konusmalar = {}
+    for m in hepsi:
+        diger_id = m.recipient_id if m.sender_id == uid else m.sender_id
+        if diger_id not in konusmalar:
+            konusmalar[diger_id] = {"kisi": m.karsi_taraf(uid), "son": m, "okunmamis": 0}
+        if m.recipient_id == uid and m.read_at is None:
+            konusmalar[diger_id]["okunmamis"] += 1
+
+    return render_template("messages_inbox.html", konusmalar=list(konusmalar.values()))
+
+
+@app.route("/mesajlar/<int:user_id>", methods=["GET", "POST"])
+@login_required
+@limiter.limit("30 per minute", methods=["POST"])
+def messages_thread(user_id):
+    diger = User.query.get_or_404(user_id)
+    if diger.id == current_user.id:
+        abort(403)
+
+    var_olan = konusma_sorgusu(current_user.id, diger.id).first()
+
+    # Konusma yoksa yeni baslatma izni aranir; varsa taraflar devam edebilir.
+    if not var_olan and not mesaj_atabilir_mi(current_user, diger):
+        abort(403)
+
+    if request.method == "POST":
+        govde = request.form.get("body", "").strip()
+        if not govde:
+            flash("Boş mesaj gönderilemez.", "error")
+        elif len(govde) > 4000:
+            flash("Mesaj çok uzun (en fazla 4000 karakter).", "error")
+        else:
+            db.session.add(Message(
+                sender_id=current_user.id, recipient_id=diger.id, body=govde))
+            db.session.commit()
+        return redirect(url_for("messages_thread", user_id=diger.id))
+
+    mesajlar = konusma_sorgusu(current_user.id, diger.id).order_by(Message.created_at).all()
+
+    # Acilan konusmadaki okunmamislari okundu isaretle
+    okunmamis = [m for m in mesajlar if m.recipient_id == current_user.id and m.read_at is None]
+    if okunmamis:
+        simdi = datetime.now()
+        for m in okunmamis:
+            m.read_at = simdi
+        db.session.commit()
+
+    return render_template("messages_thread.html", diger=diger, mesajlar=mesajlar)
 
 
 # ---------- Yönetici (kampüs koordinatörü) ----------

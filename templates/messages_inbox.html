@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Mesajlar — Kariyer Portalı{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Mesajlar</span>
+    <h1 class="page-title">Gelen Kutusu</h1>
+  </div>
+  <p class="count">
+    <strong>{{ konusmalar|length }}</strong> konuşma
+    {%- if okunmamis_mesaj %} &middot; <strong>{{ okunmamis_mesaj }}</strong> okunmamış{% endif -%}
+  </p>
+</div>
+
+{% if konusmalar %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Kişi</th>
+        <th>Son mesaj</th>
+        <th>Tarih</th>
+        <th><span class="hidden">Aç</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for k in konusmalar %}
+      <tr>
+        <td class="cell-who">
+          <div class="who">
+            <span class="portrait portrait-md">
+              {% if k.kisi.photo_filename and current_user.role != 'student' %}
+                <img src="{{ url_for('uploaded_photo', filename=k.kisi.photo_filename) }}" alt="">
+              {% else %}{{ k.kisi.initials }}{% endif %}
+            </span>
+            <span class="who-text">
+              <span class="who-name">{{ k.kisi.full_name or k.kisi.company_name or k.kisi.email }}</span>
+              <span class="who-mail">
+                {%- if k.kisi.role == 'admin' %}Kampüs koordinatörü
+                {%- elif k.kisi.role == 'company' %}Kurum
+                {%- else %}Öğrenci{% endif -%}
+              </span>
+            </span>
+          </div>
+        </td>
+
+        <td data-label="Son mesaj">
+          <span class="msg-preview {{ 'is-unread' if k.okunmamis }}">
+            {%- if k.son.sender_id == current_user.id %}<span class="msg-you">Siz:</span> {% endif -%}
+            {{ k.son.body }}
+          </span>
+          {% if k.okunmamis %}<span class="badge">{{ k.okunmamis }}</span>{% endif %}
+        </td>
+
+        <td data-label="Tarih">
+          <span class="entry-meta">{{ k.son.created_at.strftime('%d.%m.%Y %H:%M') if k.son.created_at else '' }}</span>
+        </td>
+
+        <td class="col-actions">
+          <a class="btn-cell" href="{{ url_for('messages_thread', user_id=k.kisi.id) }}">AÇ</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <p class="empty-title">Henüz mesajınız yok</p>
+  <p class="empty-text">
+    {% if current_user.role == 'company' %}
+      Aday havuzundan bir adayın CV'sini açıp <strong>Mesaj gönder</strong> ile iletişime geçebilirsiniz.
+    {% elif current_user.role == 'student' %}
+      Kurumlar CV'nizi inceleyip size yazdığında mesajlar burada görünecek.
+    {% else %}
+      Öğrenciler ve kurumlar size yazdığında burada görünecek.
+    {% endif %}
+  </p>
+</div>
+{% endif %}
+{% endblock %}

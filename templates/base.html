@@ -47,6 +47,9 @@
              class="nav-link {{ 'is-active' if request.endpoint in ['company_dashboard', 'student_detail'] }}">Aday Havuzu</a>
         {% endif %}
 
+        <a href="{{ url_for('messages_inbox') }}"
+           class="nav-link {{ 'is-active' if request.endpoint in ['messages_inbox', 'messages_thread'] }}">Mesajlar{% if okunmamis_mesaj %}<span class="badge">{{ okunmamis_mesaj }}</span>{% endif %}</a>
+
         <div class="app-user">
           <span class="portrait portrait-sm">{{ current_user.initials }}</span>
           <span class="app-user-name">{{ current_user.full_name or current_user.company_name }}</span>
@@ -104,6 +107,8 @@
         <a href="{{ url_for('company_dashboard') }}"
            class="{{ 'is-active' if request.endpoint in ['company_dashboard', 'student_detail'] }}">Aday Havuzu</a>
       {% endif %}
+      <a href="{{ url_for('messages_inbox') }}"
+         class="{{ 'is-active' if request.endpoint in ['messages_inbox', 'messages_thread'] }}">Mesajlar{% if okunmamis_mesaj %}<span class="badge">{{ okunmamis_mesaj }}</span>{% endif %}</a>
     {% else %}
       {# Kayıt bağlantıları burada yok: giriş sayfalarının altında zaten
          "Hesabınız yok mu? Kayıt olun" bağlantısı var. #}
