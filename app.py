@@ -10,6 +10,7 @@ from flask import Flask, render_template, redirect, url_for, request, flash, abo
 from flask_login import (
     LoginManager, login_user, logout_user, login_required, current_user
 )
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from xhtml2pdf import pisa
@@ -93,6 +94,14 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 guvenlik_log = logging.getLogger("guvenlik")
+
+# Uygulama bir vekil sunucunun (PythonAnywhere / Fly nginx) arkasinda
+# calisiyor. ProxyFix olmadan Flask her istegin VEKIL SUNUCUDAN geldigini
+# sanir; o zaman "IP basina 10 giris/dakika" sinirimiz IP basina degil
+# TUM SITE icin gecerli olur ve tek bir kullanici herkesi kilitleyebilir.
+# x_for=1: yalnizca en son vekilin ekledigi IP'ye guvenilir. Daha fazlasina
+# guvenmek, istemcinin X-Forwarded-For basligini uydurmasina izin verirdi.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # CSRF (siteler arasi istek sahteciligi) korumasi.
 #
@@ -370,7 +379,11 @@ def student_register():
 
 
 @app.route("/student/login", methods=["GET", "POST"])
-@limiter.limit("10 per minute; 40 per hour", methods=["POST"])
+# Kampus aginda onlarca ogrenci AYNI dis IP'yi paylasir (NAT). Sinir cok
+# darsa toplu veri girisi sirasinda gercek kullanicilar kilitlenir. Bu
+# deger otomatik sozluk saldirisini hala engeller (saniyede yuzlerce
+# deneme yapilamaz) ama bir sinifin ayni anda giris yapmasina izin verir.
+@limiter.limit("60 per minute; 400 per hour", methods=["POST"])
 def student_login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
@@ -543,7 +556,11 @@ def company_register():
     return render_template("company_register.html")
 
 @app.route("/company/login", methods=["GET", "POST"])
-@limiter.limit("10 per minute; 40 per hour", methods=["POST"])
+# Kampus aginda onlarca ogrenci AYNI dis IP'yi paylasir (NAT). Sinir cok
+# darsa toplu veri girisi sirasinda gercek kullanicilar kilitlenir. Bu
+# deger otomatik sozluk saldirisini hala engeller (saniyede yuzlerce
+# deneme yapilamaz) ama bir sinifin ayni anda giris yapmasina izin verir.
+@limiter.limit("60 per minute; 400 per hour", methods=["POST"])
 def company_login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
@@ -941,7 +958,7 @@ def messages_thread(user_id):
 # gunde birkac kez giriyor. Saldirgan icin ise 5 deneme/dakika, sozluk
 # saldirisini pratikte imkansiz hale getirir.
 @app.route("/admin/giris", methods=["GET", "POST"])
-@limiter.limit("5 per minute; 20 per hour", methods=["POST"])
+@limiter.limit("15 per minute; 60 per hour", methods=["POST"])
 def admin_login():
     if current_user.is_authenticated and current_user.role == "admin":
         return redirect(url_for("admin_overview"))
