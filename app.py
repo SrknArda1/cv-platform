@@ -13,6 +13,9 @@ from flask_login import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from xhtml2pdf import pisa
+from xhtml2pdf.default import DEFAULT_FONT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 import logging
 
@@ -34,6 +37,26 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 # DATA_DIR=/data verilir. Aksi halde her dagitimda veritabani ve
 # yuklenen transkriptler silinir.
 DATA_DIR = os.environ.get("DATA_DIR", BASE_DIR)
+
+# PDF icin Turkce karakterleri destekleyen font.
+#
+# NEDEN @font-face DEGIL:
+# Sablonda @font-face kullanilirsa xhtml2pdf 0.2.16 font dosyasini once
+# bir NamedTemporaryFile'a kopyaliyor, sonra reportlab'e o gecici dosyanin
+# ADINI veriyor. Windows acik bir gecici dosyanin adla yeniden acilmasina
+# izin vermedigi icin uretim "TTFError: Can't open file" ile cokuyordu.
+# Mutlak yol vermek de kurtarmiyor -- kopyalama her halukarda yapiliyor.
+#
+# Cozum: fontu reportlab'e dogrudan kaydedip xhtml2pdf'in font haritasina
+# da tanitmak. Boylece @font-face hic devreye girmiyor, gecici dosya
+# olusmuyor ve ayni kod hem Windows'ta hem Linux'ta calisiyor.
+_FONT_YOLU = os.path.join(BASE_DIR, "static", "fonts", "DejaVuSans.ttf")
+try:
+    pdfmetrics.registerFont(TTFont("DejaVuSans", _FONT_YOLU))
+    # xhtml2pdf font adlarini kucuk harfe cevirerek arar
+    DEFAULT_FONT["dejavusans"] = "DejaVuSans"
+except Exception as _font_hata:        # font yoksa PDF yine uretilir, varsayilana duser
+    print(f"[uyari] PDF fontu yuklenemedi: {_font_hata}")
 
 TRANSCRIPT_FOLDER = os.path.join(DATA_DIR, "uploads", "transcripts")
 PHOTO_FOLDER = os.path.join(DATA_DIR, "uploads", "photos")
@@ -646,9 +669,24 @@ def student_detail(student_id):
 
 
 @app.route("/company/student/<int:student_id>/pdf")
+@app.route("/student/cv-pdf", endpoint="download_own_cv_pdf")
 @login_required
-@role_required("company")
-def download_student_cv_pdf(student_id):
+def download_student_cv_pdf(student_id=None):
+    """CV'yi PDF olarak indirir.
+
+    Kurum ve yonetici herhangi bir adayin CV'sini; ogrenci YALNIZCA kendi
+    CV'sini indirebilir. Ogrenciler icin /student/cv-pdf kisayolu var,
+    boylece adres cubugunda /company/... gormuyorlar.
+    """
+    if student_id is None:                       # /student/cv-pdf
+        student_id = current_user.id
+
+    if current_user.role == "student":
+        if current_user.id != student_id:
+            abort(403)
+    elif current_user.role not in ("company", "admin"):
+        abort(403)
+
     student = User.query.filter_by(id=student_id, role="student").first_or_404()
     
     html_content = render_template("cv_pdf.html", student=student)
