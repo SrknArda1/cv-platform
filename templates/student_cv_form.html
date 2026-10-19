@@ -169,6 +169,12 @@
           <input type="file" id="photo" name="photo" accept=".jpg,.jpeg,.png,.webp">
           {% if student.photo_filename %}
             <span class="file-note">Yüklü — yeni seçerseniz üzerine yazılır.</span>
+            {# Yüklenen dosyayı geri alabilmek için; işaretlenip kaydedilince
+               dosya diskten de silinir. #}
+            <label class="check">
+              <input type="checkbox" name="remove_photo" value="1">
+              Yüklü fotoğrafı kaldır
+            </label>
           {% else %}
             <span class="field-hint">JPG, PNG veya WEBP.</span>
           {% endif %}
@@ -179,6 +185,13 @@
           <input type="file" id="transcript" name="transcript" accept=".pdf,.jpg,.jpeg,.png">
           {% if student.transcript_filename %}
             <span class="file-note">Yüklü — yeni seçerseniz üzerine yazılır.</span>
+            <label class="check">
+              <input type="checkbox" name="remove_transcript" value="1">
+              Yüklü transkripti kaldır
+            </label>
+            <span class="field-hint">
+              Kaldırırsanız belge sunucudan tamamen silinir ve varsa doğrulaması düşer.
+            </span>
           {% else %}
             <span class="field-hint">PDF, JPG veya PNG, en fazla 10 MB. Kurumlar transkripti olan adayları ayrıca filtreleyebiliyor.</span>
           {% endif %}

@@ -140,6 +140,21 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
+def dosyayi_sil(klasor, dosya_adi):
+    """Yuklenen bir dosyayi diskten siler.
+
+    Dosya zaten yoksa sessizce gecer. Veritabani kaydini silmek yetmez:
+    kayit silinse de dosya diskte kalirsa ogrencinin transkripti sunucuda
+    durmaya devam eder.
+    """
+    if not dosya_adi:
+        return
+    try:
+        os.remove(os.path.join(klasor, dosya_adi))
+    except OSError:
+        pass
+
+
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_TRANSCRIPT_EXTENSIONS
 
@@ -366,27 +381,47 @@ def student_cv_form():
         current_user.summary = request.form.get("summary", "").strip()
         current_user.skills = request.form.get("skills", "").strip()
 
-        # Profil Fotoğrafı Yükleme
+        # Profil Fotoğrafı: kaldırma ya da yükleme
         photo = request.files.get("photo")
-        if photo and photo.filename:
+        if request.form.get("remove_photo") == "1":
+            dosyayi_sil(app.config["PHOTO_FOLDER"], current_user.photo_filename)
+            current_user.photo_filename = None
+        elif photo and photo.filename:
             if not allowed_photo(photo.filename):
                 flash("Fotoğraf için sadece JPG, PNG veya WEBP yükleyebilirsiniz.", "error")
                 return redirect(url_for("student_cv_form"))
             ext = photo.filename.rsplit(".", 1)[1].lower()
             photo_filename = secure_filename(f"photo_{current_user.id}_{int(datetime.utcnow().timestamp())}.{ext}")
+            # Dosya adinda zaman damgasi var, yani her yukleme YENI bir ad
+            # uretir. Eskisi elle silinmezse diskte sonsuza kadar kalir.
+            eski = current_user.photo_filename
             photo.save(os.path.join(app.config["PHOTO_FOLDER"], photo_filename))
             current_user.photo_filename = photo_filename
+            if eski and eski != photo_filename:
+                dosyayi_sil(app.config["PHOTO_FOLDER"], eski)
 
-        # Transkript yükleme
+        # Transkript: kaldırma ya da yükleme
         file = request.files.get("transcript")
-        if file and file.filename:
+        if request.form.get("remove_transcript") == "1":
+            dosyayi_sil(app.config["UPLOAD_FOLDER"], current_user.transcript_filename)
+            current_user.transcript_filename = None
+            # Belge gidince doğrulama da anlamsız kalır
+            current_user.transcript_verified = False
+            current_user.transcript_verified_at = None
+            current_user.transcript_verified_by_id = None
+        elif file and file.filename:
             if not allowed_file(file.filename):
                 flash("Sadece PDF, JPG veya PNG dosyası yükleyebilirsiniz.", "error")
                 return redirect(url_for("student_cv_form"))
             ext = file.filename.rsplit(".", 1)[1].lower()
             filename = secure_filename(f"transcript_{current_user.id}.{ext}")
+            # Uzanti degisirse (.pdf -> .png) ad da degisir ve eski dosya
+            # diskte kalir; o yuzden yenisini yazmadan once eskisi silinir.
+            eski = current_user.transcript_filename
             file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
             current_user.transcript_filename = filename
+            if eski and eski != filename:
+                dosyayi_sil(app.config["UPLOAD_FOLDER"], eski)
 
             # Yeni belge yuklendi: onceki dogrulama artik gecersiz.
             # Bu sifirlama olmadan ogrenci dogrulanmis transkripti baska bir
