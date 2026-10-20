@@ -39,23 +39,44 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 # yuklenen transkriptler silinir.
 DATA_DIR = os.environ.get("DATA_DIR", BASE_DIR)
 
-# PDF icin Turkce karakterleri destekleyen font.
+# PDF fontlari.
+#
+# Sitedeki uc register PDF'te de karsiliksiz kalmasin diye ucu de kayitli:
+#   serif -> belge basliklari      sans -> govde      mono -> tarih/etiket
+# Fontlar projeye KOPYALANDI (static/fonts). Sistem fontuna guvenmek
+# kirilgandir; sunucuda bulunmayabilir.
 #
 # NEDEN @font-face DEGIL:
 # Sablonda @font-face kullanilirsa xhtml2pdf 0.2.16 font dosyasini once
-# bir NamedTemporaryFile'a kopyaliyor, sonra reportlab'e o gecici dosyanin
-# ADINI veriyor. Windows acik bir gecici dosyanin adla yeniden acilmasina
-# izin vermedigi icin uretim "TTFError: Can't open file" ile cokuyordu.
-# Mutlak yol vermek de kurtarmiyor -- kopyalama her halukarda yapiliyor.
-#
-# Cozum: fontu reportlab'e dogrudan kaydedip xhtml2pdf'in font haritasina
-# da tanitmak. Boylece @font-face hic devreye girmiyor, gecici dosya
-# olusmuyor ve ayni kod hem Windows'ta hem Linux'ta calisiyor.
-_FONT_YOLU = os.path.join(BASE_DIR, "static", "fonts", "DejaVuSans.ttf")
+# bir NamedTemporaryFile'a kopyalayip reportlab'e o gecici dosyanin ADINI
+# veriyor. Windows acik bir gecici dosyanin adla yeniden acilmasina izin
+# vermedigi icin uretim "TTFError: Can't open file" ile cokuyordu.
+# Fontu dogrudan kaydedip xhtml2pdf'in font haritasina tanitinca gecici
+# dosya hic olusmuyor; ayni kod Windows'ta ve Linux'ta calisiyor.
+_FONT_KLASORU = os.path.join(BASE_DIR, "static", "fonts")
+_FONT_YOLU = os.path.join(_FONT_KLASORU, "DejaVuSans.ttf")
+
+_PDF_FONTLARI = [
+    ("DejaVuSans",       "DejaVuSans.ttf"),
+    ("DejaVuSans-Bold",  "DejaVuSans-Bold.ttf"),
+    ("DejaVuSerif",      "DejaVuSerif.ttf"),
+    ("DejaVuSerif-Bold", "DejaVuSerif-Bold.ttf"),
+    ("DejaVuSansMono",   "DejaVuSansMono.ttf"),
+]
+
 try:
-    pdfmetrics.registerFont(TTFont("DejaVuSans", _FONT_YOLU))
+    for _ad, _dosya in _PDF_FONTLARI:
+        pdfmetrics.registerFont(TTFont(_ad, os.path.join(_FONT_KLASORU, _dosya)))
+
+    # Kalin yazim icin aile tanimi: <b> ve font-weight:bold bu esleme
+    # sayesinde gercek kalin dosyaya gider, yapay kalinlastirmaya degil.
+    pdfmetrics.registerFontFamily("DejaVuSans", normal="DejaVuSans", bold="DejaVuSans-Bold")
+    pdfmetrics.registerFontFamily("DejaVuSerif", normal="DejaVuSerif", bold="DejaVuSerif-Bold")
+
     # xhtml2pdf font adlarini kucuk harfe cevirerek arar
     DEFAULT_FONT["dejavusans"] = "DejaVuSans"
+    DEFAULT_FONT["dejavuserif"] = "DejaVuSerif"
+    DEFAULT_FONT["dejavusansmono"] = "DejaVuSansMono"
 except Exception as _font_hata:        # font yoksa PDF yine uretilir, varsayilana duser
     print(f"[uyari] PDF fontu yuklenemedi: {_font_hata}")
 
