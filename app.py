@@ -778,10 +778,31 @@ def download_student_cv_pdf(student_id=None):
 
     student = User.query.filter_by(id=student_id, role="student").first_or_404()
     
-    html_content = render_template("cv_pdf.html", student=student)
+    # Fotograf yalnizca PDF kutuphanesinin acabilecegi bicimdeyse gonderilir.
+    # Ucu de test edildi: png, jpg ve webp sorunsuz gomuluyor. Liste yine de
+    # acik tutuluyor cunku desteklenmeyen bir bicim PDF uretimini tamamen
+    # cokertir; resimsiz bir CV, hata sayfasindan iyidir.
+    PDF_RESIM_BICIMLERI = (".png", ".jpg", ".jpeg", ".webp")
+    foto = student.photo_filename
+    if foto:
+        uygun = foto.lower().endswith(PDF_RESIM_BICIMLERI)
+        varmi = os.path.exists(os.path.join(PHOTO_FOLDER, foto))
+        if not (uygun and varmi):
+            foto = None
+
+    html_content = render_template("cv_pdf.html", student=student, foto=foto)
     pdf_buffer = BytesIO()
     
     def link_callback(uri, rel):
+        """Sablondaki goreli yollari diskteki gercek dosyaya cevirir.
+
+        Profil fotograflari static/ altinda DEGIL, DATA_DIR altindaki
+        uploads/photos klasorunde duruyor (kalici disk). Bu yuzden ayri
+        ele alinmalari gerekiyor; yoksa xhtml2pdf dosyayi bulamaz ve
+        resim PDF'e hic girmez.
+        """
+        if uri.startswith("uploads/photos/"):
+            return os.path.join(PHOTO_FOLDER, os.path.basename(uri))
         if uri.startswith("static/"):
             return os.path.join(BASE_DIR, uri)
         return os.path.join(BASE_DIR, "static", uri)

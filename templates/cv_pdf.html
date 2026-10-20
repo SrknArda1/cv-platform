@@ -24,6 +24,19 @@
     padding-bottom: 12px; 
     margin-bottom: 16px; 
   }
+  /* Baslik duzeni TABLO ile kuruluyor: xhtml2pdf flexbox desteklemiyor,
+     float da bu motorda guvenilir calismiyor. Tablo en saglam yontem. */
+  .header-table { width: 100%; }
+  .header-left { vertical-align: top; }
+  .header-photo {
+    width: 95px;
+    text-align: right;
+    vertical-align: top;
+  }
+  .header-photo img {
+    width: 85px;
+    height: 105px;
+  }
   .name { 
     font-size: 18pt; 
     font-weight: bold; 
@@ -72,11 +85,24 @@
 <body>
 
   <div class="header">
-    <div class="name">{{ student.full_name or student.email }}</div>
-    <div class="department">{{ student.department or '' }}</div>
-    <div class="contact">
-      E-posta: {{ student.email }} &nbsp;|&nbsp; Telefon: {{ student.phone or 'Belirtilmedi' }}
-    </div>
+    <table class="header-table">
+      <tr>
+        <td class="header-left">
+          <div class="name">{{ student.full_name or student.email }}</div>
+          <div class="department">{{ student.department or '' }}</div>
+          <div class="contact">
+            E-posta: {{ student.email }} &nbsp;|&nbsp; Telefon: {{ student.phone or 'Belirtilmedi' }}
+          </div>
+        </td>
+        {# `foto` app.py'de dogrulanir: dosya var ve PDF'in acabilecegi
+           bir bicimde (png/jpg). Degilse None gelir ve hucre hic cizilmez. #}
+        {% if foto %}
+          <td class="header-photo">
+            <img src="uploads/photos/{{ foto }}" alt="" />
+          </td>
+        {% endif %}
+      </tr>
+    </table>
   </div>
 
   {% if student.summary %}
