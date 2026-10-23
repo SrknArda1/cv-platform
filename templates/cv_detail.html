@@ -124,8 +124,14 @@
           <div class="entry-body">
             <div class="entry-title-row">
               <span class="entry-title">{{ cert.name }}</span>
+              {# Adres app.py'de guvenli_baglanti() ile http(s)'e indirgenir;
+                 sablona yalnizca tiklanmasi guvenli adres gelir. #}
+              {% if cert.credential_url %}
+                <a class="entry-link" href="{{ cert.credential_url }}" target="_blank" rel="noopener">doğrula &nearr;</a>
+              {% endif %}
             </div>
             {% if cert.institution %}<div class="entry-sub">{{ cert.institution }}</div>{% endif %}
+            {% if cert.credential_id %}<div class="entry-meta">Belge no {{ cert.credential_id }}</div>{% endif %}
           </div>
         </div>
       {% endfor %}

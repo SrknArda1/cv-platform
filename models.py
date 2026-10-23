@@ -258,6 +258,18 @@ class Certificate(db.Model):
     institution = db.Column(db.String(255))
     date = db.Column(db.String(30))
 
+    # Dijital dogrulama: gunumuzde sertifika verenler (Coursera, AWS, Credly,
+    # Microsoft Learn) belgeyle birlikte bir numara ve o numarayi sorgulayan
+    # bir adres veriyor. Ikisi olmadan sertifika kurum icin dogrulanamaz bir
+    # iddiadir; bu yuzden ikisi de CV'de ve PDF'te gosterilir.
+    credential_id = db.Column(db.String(120))
+    credential_url = db.Column(db.String(500))
+
+    @property
+    def dogrulanabilir(self):
+        """Kurum bu sertifikayi kaynagindan teyit edebilir mi?"""
+        return bool(self.credential_url or self.credential_id)
+
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)

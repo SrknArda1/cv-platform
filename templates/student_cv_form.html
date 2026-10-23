@@ -88,6 +88,19 @@
       <label class="label">Tarih</label>
       <input class="input" type="text" name="cert_date[]" value="{{ cert.date }}" placeholder="2024">
     </div>
+    {# Dijital dogrulama alanlari. type="url" degil type="text": insanlar adresi
+       cogu zaman "credly.com/..." diye semasiz yaziyor, tarayici bunu reddeder.
+       Sunucu guvenli_baglanti() ile basina https ekliyor. #}
+    <div class="field col-4">
+      <label class="label">Belge / doğrulama no</label>
+      <input class="input" type="text" name="cert_credential_id[]" value="{{ cert.credential_id }}" placeholder="Örn: AWS-PSA-12345">
+      <span class="field-hint">Sertifikanın üzerindeki numara.</span>
+    </div>
+    <div class="field col-8">
+      <label class="label">Doğrulama bağlantısı</label>
+      <input class="input" type="text" name="cert_credential_url[]" value="{{ cert.credential_url }}" placeholder="https://www.credly.com/badges/...">
+      <span class="field-hint">Kurumlar bu bağlantıdan sertifikanızı kaynağından teyit edebilir.</span>
+    </div>
   </div>
   <button class="rowitem-remove" type="button" data-row-remove title="Bu satırı sil">SİL</button>
 </div>
@@ -236,7 +249,7 @@
         {% for cert in student.certificates %}{{ cert_row(cert) }}{% endfor %}
       </div>
       <button class="btn btn-outline rowlist-add" type="button" data-row-add="cert-rows" data-row-template="cert-row-template">+ Sertifika ekle</button>
-      <template id="cert-row-template">{{ cert_row(namespace(name='', institution='', date='')) }}</template>
+      <template id="cert-row-template">{{ cert_row(namespace(name='', institution='', date='', credential_id='', credential_url='')) }}</template>
     </div>
 
     {# ---------- Projeler ---------- #}

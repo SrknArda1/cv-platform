@@ -93,6 +93,10 @@ kendiliğinden düzelir; JavaScript saymaz.
 - Her bölümde "+ ... ekle" / "SİL" ile dinamik satır yönetimi
 - Kaydedilmemiş değişiklikle sayfadan çıkarken tarayıcı uyarısı
 - Transkript yükleme (PDF / JPG / PNG, azami 10 MB)
+- **Sertifika dijital doğrulaması:** her sertifikaya belge/doğrulama numarası
+  ve doğrulama bağlantısı eklenebilir. Kurum, CV'deki "doğrula" bağlantısıyla
+  sertifikayı kaynağından (Credly, Coursera, BTK Akademi…) teyit eder; PDF
+  çıktısında adres metin olarak basılır, kâğıda basılan CV'de de okunur
 - Panel: profil doluluk yüzdesi, eksik bölüm listesi, içerik sayaçları,
   transkript durumu
 - "Önizleme" sayfası — kurumların göreceği CV'nin birebir aynısı, salt-okunur
@@ -119,6 +123,11 @@ kendiliğinden düzelir; JavaScript saymaz.
 - Roller ayrı: öğrenci, kurum ve yönetici birbirinin sayfalarına giremez (403)
 - Kurum hesapları onaydan geçmeden giriş yapamaz
 - Yüklenen fotoğraf ve transkriptler giriş gerektirir
+- **Öğrencinin girdiği adresler yalnızca `http`/`https` olabilir**
+  (`guvenli_baglanti()`). Jinja özel karakterleri kaçırır ama şemayı
+  denetlemez: `javascript:...` yazan bir öğrencinin bağlantısına tıklayan
+  kurum o kodu kendi oturumunda çalıştırırdı. Şemasız yazılan adreslere
+  (`credly.com/...`) reddetmek yerine `https://` eklenir
 - Durum değiştiren her işlem POST ve **CSRF token** ile korunur
 - **Giriş denemesi sınırı:** yönetici 5/dakika, öğrenci ve kurum 10/dakika.
   Sınırsız deneme olsaydı bir betik dakikada binlerce şifre deneyebilirdi —

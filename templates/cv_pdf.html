@@ -95,13 +95,29 @@
     font-size: 7.5pt;
     color: #857f73;
   }
+  /* Bir kaydin alt satirlari (kurum, belge no, adres) tek bir blok gibi
+     okunmali. xhtml2pdf -- ontanimli CSS'inde gorunmese de -- her blok
+     ogesine kenar boslugu veriyor; bu satirlar arasinda 35.8pt bosluk
+     birakiyordu, yani 9 puntoluk metnin dort kati. margin:0 ile 20.8pt'ye
+     iner. Bolumler arasi ayrim .section'in ust cizgisiyle zaten saglaniyor. */
+  .entry-sub, .entry-meta, .entry-url, .taglist {
+    margin: 0;
+    padding: 0;
+  }
+
   .entry-sub  { font-size: 9pt; color: #4f4b43; }
   .entry-meta {
     font-family: 'DejaVuSansMono';
     font-size: 8pt;
     color: #857f73;
   }
-  .entry-text { font-size: 9pt; color: #4f4b43; padding-top: 2px; }
+  /* Aciklama bir paragraf, ustteki basliga yapismasin. */
+  .entry-text { font-size: 9pt; color: #4f4b43; margin: 0; padding-top: 3px; }
+  .entry-url {
+    font-family: 'DejaVuSansMono';
+    font-size: 6.5pt;
+    color: #857f73;
+  }
 
   .text { font-size: 9.5pt; color: #4f4b43; }
 
@@ -210,6 +226,11 @@
             <td class="entry-body">
               <span class="entry-title">{{ cert.name }}</span>
               {% if cert.institution %}<div class="entry-sub">{{ cert.institution }}</div>{% endif %}
+              {% if cert.credential_id %}<div class="entry-meta">Belge no {{ cert.credential_id }}</div>{% endif %}
+              {# Kagida basilan CV'de baglanti tiklanamaz, adresin kendisi
+                 okunabilir olmali. Uzun adresler tasmasin diye .entry-url
+                 daha kucuk puntoda. #}
+              {% if cert.credential_url %}<div class="entry-url">{{ cert.credential_url }}</div>{% endif %}
             </td>
           </tr>
         </table>

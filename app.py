@@ -231,6 +231,28 @@ def role_required(*roles):
     return decorator
 
 
+# Ogrencinin girdigi adresler sablonda href="" icine yaziliyor. Jinja
+# ozel karakterleri kacirir ama SEMAYI denetlemez: "javascript:..." yazan bir
+# ogrencinin baglantisina tiklayan kurum, o kodu kendi oturumunda calistirir.
+# O yuzden yalnizca http/https gecer. Ayrica insanlar adresi cogu zaman
+# "credly.com/..." diye semasiz yaziyor; onu reddetmek yerine https ekliyoruz.
+IZINLI_SEMALAR = ("http://", "https://")
+
+
+def guvenli_baglanti(adres):
+    """Gosterilmesi guvenli bir http(s) adresi veya bos dize doner."""
+    adres = (adres or "").strip()
+    if not adres:
+        return ""
+    if adres.lower().startswith(IZINLI_SEMALAR):
+        return adres
+    # Sema yok: ":" varsa bu baska bir sema denemesidir (javascript:, data:),
+    # atilir. Yoksa kullanici sadece alan adini yazmis, https ekliyoruz.
+    if ":" in adres.split("/", 1)[0]:
+        return ""
+    return "https://" + adres
+
+
 def parse_dynamic_rows(prefix, fields, required_field):
     lists = {f: request.form.getlist(f"{prefix}_{f}[]") for f in fields}
     length = max((len(v) for v in lists.values()), default=0)
@@ -512,13 +534,15 @@ def student_cv_form():
             db.session.add(Experience(student_id=current_user.id, **row))
 
         for row in parse_dynamic_rows(
-            "cert", ["name", "institution", "date"], "name"
+            "cert", ["name", "institution", "date", "credential_id", "credential_url"], "name"
         ):
+            row["credential_url"] = guvenli_baglanti(row["credential_url"])
             db.session.add(Certificate(student_id=current_user.id, **row))
 
         for row in parse_dynamic_rows(
             "proj", ["title", "description", "tech_stack", "link"], "title"
         ):
+            row["link"] = guvenli_baglanti(row["link"])
             db.session.add(Project(student_id=current_user.id, **row))
 
         db.session.commit()
@@ -1512,8 +1536,14 @@ def seed_demo():
             ))
         if seviye >= 3:
             sad, kurum = random.choice(sertifikalar)
+            # Demo verisinde sertifikalarin bir kismi dogrulanabilir olsun ki
+            # "doğrula" baglantisinin ve belge no'nun nasil gorundugu denenebilsin.
+            kod = f"{kurum[:3].upper()}-{random.randint(10000, 99999)}"
             db.session.add(Certificate(
-                student_id=ogr.id, name=sad, institution=kurum, date="2025"))
+                student_id=ogr.id, name=sad, institution=kurum, date="2025",
+                credential_id=kod,
+                credential_url=(f"https://ornek-dogrulama.test/belge/{kod}"
+                                if random.random() < 0.6 else None)))
             pad, tek = random.choice(projeler)
             db.session.add(Project(
                 student_id=ogr.id, title=pad, tech_stack=tek,
