@@ -27,6 +27,7 @@ from flask_limiter.util import get_remote_address
 
 from models import (db, User, Education, Experience, Certificate, Project,
                     Department, Message)
+from api import api as api_blueprint, hata_yaniti as api_hata_yaniti
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -289,6 +290,11 @@ def inject_globals():
 # kabukta gosterilsinler diye tek bir sablona baglandilar.
 
 def _error_page(code, title, text):
+    # /api/ altindaki hatalar HTML sayfasi degil JSON donmeli: istemcinin
+    # ayristiricisi HTML gorurse coker. Bu TEK kontrol asagidaki butun
+    # errorhandler'lari kapsiyor -- her birine ayri ayri eklemeye gerek yok.
+    if request.path.startswith("/api/"):
+        return api_hata_yaniti(code, title, text)
     return render_template("error.html", code=code, title=title, text=text), code
 
 
@@ -1341,6 +1347,30 @@ def admin_delete_department(department_id):
 def logout():
     logout_user()
     return redirect(url_for("index"))
+
+
+# ---------- API katmani ----------
+# JSON'u girintili bas. Varsayilan sikistirilmis bicim tek satirdir ve
+# tarayicida okunaksiz bir metin duvari olarak gorunur. Bu API insan
+# tarafindan da acilacagi icin (uc noktayi tarayiciya yazip bakmak) okunurluk
+# birkac yuz baytlik buyumeye deger.
+app.json.compact = False
+
+
+# Blueprint, Flask'ta rotalari ortak bir onek ve ortak davranis altinda
+# grupladan yapidir -- Laravel'deki routes/api.php dosyasinin karsiligi.
+# Ayri bir dosyada (api.py) durur: sayfalar insana, API makineye konusur.
+app.register_blueprint(api_blueprint)
+
+# API acik bir veri kaynagi; sayfalardan daha genis bir sinir yeterli ama
+# sinirsiz olmamali. Bir betik saniyede yuzlerce istek atarsa ucretsiz
+# katmanin gunluk CPU butcesi tukenir ve SITE TAMAMEN durur.
+limiter.limit("120 per minute; 2000 per hour")(api_blueprint)
+
+# CSRF korumasi yalnizca durum degistiren metotlar icindir ve cerez tabanli
+# oturuma dayanir. API salt-okunur ve cerezsiz oldugu icin konu disi; yine de
+# acikca muaf tutuluyor ki ileride POST eklenirse bilincli bir karar olsun.
+csrf.exempt(api_blueprint)
 
 
 def create_app():

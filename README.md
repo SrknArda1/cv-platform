@@ -152,6 +152,61 @@ Bölümler `Department` tablosunda tutulur. İlk açılışta `seed_departments(
 yönetici `/admin/bolumler` ekranından ekleyip silebilir (kod değişikliği
 gerekmez).
 
+## API (`/api/v1`)
+
+Dış sistemlerin veriyi program olarak okuyabilmesi için REST API katmanı.
+Ayrı dosyada (`api.py`) bir **Blueprint** olarak durur; mevcut HTML
+sayfalarına hiç dokunmaz. Sayfalar insana, API makineye konuşur.
+
+| Uç nokta | Döndürdüğü |
+| --- | --- |
+| `GET /api/v1/` | API'nin kendini tanıtması: adres listesi ve filtreler |
+| `GET /api/v1/ozet` | Öğrenci / kurum / sertifika sayımları |
+| `GET /api/v1/ogrenciler` | Anonim öğrenci kayıtları, sayfalanmış |
+| `GET /api/v1/ogrenciler/<id>` | Tek kayıt |
+| `GET /api/v1/bolumler` | Bölüm bazında dağılım |
+| `GET /api/v1/yetkinlikler` | Yetkinlik frekansı |
+| `GET /api/v1/ozet/detay` | Ayrıntılı metrikler — **`X-API-Key` gerekir** |
+
+`/api/v1/ogrenciler` filtreleri: `page`, `page_size`, `department`, `skill`,
+`has_transcript`, `verified`, `min_completion`.
+
+### Tasarım kararları
+
+- **Sürümleme ilk günden** (`/api/v1`). Sonradan eklenemez: o noktada
+  sürümsüz çalışan istemciler olur ve hepsi kırılır.
+- **Yalnızca `GET`.** Dış sistemin veritabanına yazması gerekmiyor;
+  salt-okunur API saldırı yüzeyini küçültür.
+- **Kişisel veri dönmez.** Ad, e-posta, telefon ve transkript API'de
+  **yoktur**. Serileştirme katmanı modeli değil, açıkça seçilen alanları
+  döner — modele yarın yeni bir kolon eklendiğinde yanlışlıkla dışarı
+  sızmasın diye. Açık bir uç nokta, sitenin tüm giriş korumasını baypas
+  ederdi.
+- **İngilizce anahtar adları.** Türkçe anahtarlar pandas ve Excel tarafında
+  kodlama sorunu çıkarır.
+- **Tutarlı sözleşme:** her yanıt `data` / `meta` / `links` iskeletinde;
+  hata da aynı biçimde, böylece istemci tek ayrıştırıcı yazar.
+- **`/api/` altında asla HTML.** `_error_page()` yolun `/api/` ile başlayıp
+  başlamadığına bakar; API'de HTML hata sayfası dönseydi istemcinin
+  ayrıştırıcısı çökerdi.
+- **`selectinload`** ile ilişkiler tek seferde yüklenir. Olmasaydı her
+  öğrenci için ayrı sorgu çalışırdı (N+1): 50 öğrenciye 201 sorgu yerine 5.
+- **Hız sınırı** 120/dk, 2000/saat. Aşımda 429.
+- **CORS** `*` — veri anonim ve salt-okunur olduğu için güvenli.
+
+### API anahtarı
+
+`/api/v1/ozet/detay` uç noktası `API_ANAHTARI` ortam değişkenini kullanır.
+Tanımlı değilse uç nokta **503** döner — sessizce açık kalmaz. Anahtar
+karşılaştırması `hmac.compare_digest` ile yapılır: sıradan `==` ilk farklı
+karakterde erken çıkar ve yanıt süresi ölçülerek anahtar karakter karakter
+bulunabilirdi (zamanlama saldırısı).
+
+```bash
+export API_ANAHTARI="uzun-rastgele-bir-dize"
+curl -H "X-API-Key: uzun-rastgele-bir-dize" https://SUNUCU/api/v1/ozet/detay
+```
+
 ## Dağıtım
 
 Sunucuya kurulum adımları ayrı bir dosyada: **[DAGITIM.md](DAGITIM.md)**

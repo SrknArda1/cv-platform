@@ -7,6 +7,7 @@ Uygulama platformdan bağımsız yazıldı. Platforma özel olan yalnızca üç 
 | `SECRET_KEY` | Oturum çerezlerini imzalar. **Zorunlu.** `FLASK_DEBUG=0` iken verilmezse uygulama başlamayı reddeder |
 | `FLASK_DEBUG` | `0` olmalı. Açık kalırsa hata anında tarayıcıda çalışan Python konsolu açılır — yani uzaktan kod çalıştırma açığı |
 | `DATA_DIR` | Veritabanı ve yüklenen dosyaların yazılacağı klasör. **Kalıcı bir diskte olmalı** |
+| `API_ANAHTARI` | `/api/v1/ozet/detay` uç noktasını korur. İsteğe bağlı; verilmezse o uç nokta 503 döner, diğer API adresleri açık çalışır |
 
 Bunlar ayarlandıktan sonra uygulama her yerde aynı çalışır.
 
@@ -77,6 +78,10 @@ os.environ["SECRET_KEY"] = "BURAYA-UZUN-RASTGELE-BIR-DEGER"
 
 os.environ["FLASK_DEBUG"] = "0"
 os.environ["DATA_DIR"] = "/home/KULLANICIADI/kariyer-veri"
+
+# Korumalı API uç noktası için. Konsolda üretebilirsin:
+#   python -c "import secrets; print(secrets.token_urlsafe(32))"
+os.environ["API_ANAHTARI"] = "BURAYA-UZUN-RASTGELE-BIR-DEGER"
 
 from app import app as application   # noqa: E402
 ```
