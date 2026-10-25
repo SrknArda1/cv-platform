@@ -171,6 +171,28 @@ sayfalarına hiç dokunmaz. Sayfalar insana, API makineye konuşur.
 `/api/v1/ogrenciler` filtreleri: `page`, `page_size`, `department`, `skill`,
 `has_transcript`, `verified`, `min_completion`.
 
+### CSV çıktısı (Excel)
+
+`?format=csv` üç uç noktada çalışır: `ogrenciler`, `bolumler`, `yetkinlikler`.
+Filtrelerle birleşir; CSV'de sayfalama uygulanmaz çünkü tabloya aktaran
+veriyi bütün ister.
+
+```
+/api/v1/ogrenciler?format=csv
+/api/v1/ogrenciler?min_completion=25&format=csv
+```
+
+Excel'in iki klasik tuzağı çözüldü:
+
+- **UTF-8 BOM.** Olmasaydı Excel dosyayı sistemin eski kod sayfasıyla açar ve
+  Türkçe harfler bozulurdu (`Bilişim` → `BiliÅim`).
+- **Noktalı virgül ayırıcı.** Türkçe Windows'ta Excel'in liste ayırıcısı
+  `;` olduğu için virgüllü dosya tek kolona yığılırdı. pandas gibi araçlar
+  için `?delimiter=comma`.
+
+Aynı kaynağın iki temsili olması REST'te **içerik müzakeresi**dir: istemci
+hangi biçimi işleyebiliyorsa onu ister.
+
 ### Tasarım kararları
 
 - **Sürümleme ilk günden** (`/api/v1`). Sonradan eklenemez: o noktada

@@ -27,12 +27,14 @@ TASARIM KARARLARI -- her biri savunulabilir olmali:
   * Her yanit ayni iskelette: data / meta / links. Hata da ayni bicimde doner,
     boylece istemci tek bir ayristirici yazar.
 """
+import csv
 import hmac
+import io
 import os
 from datetime import datetime
 from functools import wraps
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, make_response, request
 from sqlalchemy.orm import selectinload
 
 from models import db, User, Department, Certificate, Message
@@ -42,6 +44,16 @@ api = Blueprint("api", __name__, url_prefix="/api/v1")
 SURUM = "1.0"
 SAYFA_BOYUTU = 50
 EN_BUYUK_SAYFA = 200
+
+# CSV kolon sirasi. JSON'da anahtar sirasi onemsizdir ama tabloda kolonlarin
+# okunakli bir sirada durmasi gerekir: once kimlik ve bolum, sonra olculer.
+CSV_OGRENCI_KOLONLARI = [
+    "id", "department", "gpa", "profile_completion",
+    "has_transcript", "transcript_verified",
+    "education_count", "experience_count", "certificate_count",
+    "verifiable_certificate_count", "project_count",
+    "skills", "registered_at",
+]
 
 # Korumali uc nokta icin anahtar. Ortam degiskeninden okunur: kodda sabit
 # anahtar tutmak, depoyu goren herkese anahtari vermek demektir.
@@ -79,6 +91,55 @@ def hata(kod, tur, mesaj):
         "links": {},
     }
     return jsonify(govde), kod
+
+
+def csv_yaniti(kayitlar, basliklar, dosya_adi):
+    """Duz kayit listesini CSV'ye cevirir.
+
+    Excel icin iki tuzak var, ikisi de burada cozuluyor:
+
+      1. BOM. Excel, basinda BOM olmayan bir dosyayi sistemin eski kod
+         sayfasiyla acar ve Turkce harfler bozulur ("Bilisim" -> "BiliÅim").
+         utf-8-sig ile yazmak bu isaret baytlarini ekler.
+
+      2. Ayirici. Turkce Windows'ta Excel'in liste ayiricisi NOKTALI VIRGUL
+         oldugu icin virgullu dosyayi tek kolona yigar. Varsayilan ';'
+         secildi; pandas gibi araclar icin ?delimiter=comma ile virgule
+         donulebilir.
+    """
+    ayirici = "," if (request.args.get("delimiter") or "").lower() in ("comma", ",") else ";"
+
+    tampon = io.StringIO()
+    yazici = csv.writer(tampon, delimiter=ayirici, lineterminator="\r\n",
+                        quoting=csv.QUOTE_MINIMAL)
+    yazici.writerow(basliklar)
+    for kayit in kayitlar:
+        satir = []
+        for alan in basliklar:
+            deger = kayit.get(alan)
+            if isinstance(deger, list):
+                # CSV duz bir bicimdir, ic ice liste tasiyamaz: tek hucrede
+                # birlestirilir. Ayirici olarak hucre ayiricisini KULLANMA,
+                # yoksa kolonlar kayar.
+                deger = " | ".join(deger)
+            elif deger is None:
+                deger = ""
+            elif deger is True:
+                deger = "evet"
+            elif deger is False:
+                deger = "hayir"
+            satir.append(deger)
+        yazici.writerow(satir)
+
+    govde = tampon.getvalue().encode("utf-8-sig")
+    cevap = make_response(govde)
+    cevap.headers["Content-Type"] = "text/csv; charset=utf-8"
+    cevap.headers["Content-Disposition"] = f'attachment; filename="{dosya_adi}"'
+    return cevap
+
+
+def csv_istendi():
+    return (request.args.get("format") or "").lower() == "csv"
 
 
 def hata_yaniti(kod, baslik, aciklama):
@@ -240,6 +301,14 @@ def kok():
                 "has_transcript", "verified", "min_completion",
             ]
         },
+        "csv_export": {
+            "usage": "?format=csv",
+            "available_on": ["/api/v1/ogrenciler", "/api/v1/bolumler",
+                             "/api/v1/yetkinlikler"],
+            "note": ("UTF-8 BOM ve noktali virgul ayirici ile uretilir; "
+                     "Excel'de dogrudan acilir. Virgul icin ?delimiter=comma."),
+            "example": "/api/v1/ogrenciler?format=csv",
+        },
     })
 
 
@@ -318,6 +387,11 @@ def ogrenciler():
     if en_az_doluluk:
         kayitlar = [k for k in kayitlar if k["profile_completion"] >= en_az_doluluk]
 
+    # CSV istendiginde sayfalama uygulanmaz: Excel'e aktaracak kisi veriyi
+    # butun ister, sayfa sayfa indirmek istemez.
+    if csv_istendi():
+        return csv_yaniti(kayitlar, CSV_OGRENCI_KOLONLARI, "ogrenciler.csv")
+
     toplam = len(kayitlar)
     bas = (sayfa - 1) * boyut
     dilim = kayitlar[bas:bas + boyut]
@@ -370,6 +444,12 @@ def bolumler():
     # yerine raporluyoruz -- toplamlar tutsun.
     tanimli = {d.name for d in Department.query.all()}
     bosta = [o for o in ogrenciler_ if (o.department or "") not in tanimli]
+
+    if csv_istendi():
+        return csv_yaniti(sonuc, ["id", "name", "student_count", "with_transcript",
+                                  "average_gpa", "average_completion"],
+                          "bolumler.csv")
+
     return yanit(sonuc, meta={"unassigned_students": len(bosta)})
 
 
@@ -385,6 +465,10 @@ def yetkinlikler():
 
     sirali = sorted(sayim.values(),
                     key=lambda g: (-g["student_count"], g["name"].lower()))
+
+    if csv_istendi():
+        return csv_yaniti(sirali, ["name", "student_count"], "yetkinlikler.csv")
+
     return yanit(sirali, meta={"distinct_skills": len(sirali)})
 
 
