@@ -293,7 +293,7 @@ def _error_page(code, title, text):
     # /api/ altindaki hatalar HTML sayfasi degil JSON donmeli: istemcinin
     # ayristiricisi HTML gorurse coker. Bu TEK kontrol asagidaki butun
     # errorhandler'lari kapsiyor -- her birine ayri ayri eklemeye gerek yok.
-    if request.path.startswith("/api/"):
+    if request.path.startswith("/api/v1"):
         return api_hata_yaniti(code, title, text)
     return render_template("error.html", code=code, title=title, text=text), code
 
@@ -359,6 +359,37 @@ def error_server(e):
 @app.route("/kvkk")
 def kvkk():
     return render_template("kvkk.html")
+
+
+@app.route("/api")
+def api_docs():
+    """API'nin insan yuzu.
+
+    /api/v1 altindaki uc noktalar JSON doner ve tarayicida ciplak metin gibi
+    gorunur. Bu sayfa onlari listeler, ne dondurduklerini anlatir ve indirme
+    baglantilari verir -- gercek API'lerdeki Swagger/Redoc belgesinin
+    karsiligi. Adres bilerek /api: /api/v1 ile karismaz, tahmin edilmesi
+    kolaydir.
+    """
+    uclar = [
+        {"yol": "/api/v1/", "csv": False,
+         "aciklama": "API'nin kendini tanitmasi: adres listesi, filtreler ve CSV kullanimi."},
+        {"yol": "/api/v1/ozet", "csv": False,
+         "aciklama": "Ogrenci, kurum ve sertifika sayimlari tek bakista."},
+        {"yol": "/api/v1/ogrenciler", "csv": True,
+         "aciklama": "Anonim ogrenci kayitlari. 13 alan, sayfalanmis ve filtrelenebilir."},
+        {"yol": "/api/v1/bolumler", "csv": True,
+         "aciklama": "Bolum bazinda ogrenci sayisi, ortalama not ve profil dolulugu."},
+        {"yol": "/api/v1/yetkinlikler", "csv": True,
+         "aciklama": "Hangi yetkinligin kac ogrencide gectigi, azalan sirada."},
+    ]
+    sayim = {
+        "ogrenci": User.query.filter_by(role="student").count(),
+        "bolum": Department.query.count(),
+        "sertifika": Certificate.query.count(),
+    }
+    return render_template("api_docs.html", uclar=uclar, sayim=sayim,
+                           taban=request.url_root.rstrip("/"))
 
 
 @app.route("/")

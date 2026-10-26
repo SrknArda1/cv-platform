@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Veri API'si — Kariyer Portalı{% endblock %}
+
+{% block content %}
+{# API'nin insan yuzu. Uc noktalarin kendisi /api/v1 altinda JSON doner;
+   bu sayfa onlari listeler, aciklar ve indirme baglantilari verir. Gercek
+   API'lerde bunun karsiligi Swagger/Redoc belgeleridir. #}
+<div class="docbar">
+  <a class="backlink" href="{{ url_for('index') }}">&larr; Ana sayfa</a>
+</div>
+
+<article class="doc">
+  <header class="doc-head">
+    <div class="doc-head-text">
+      <span class="eyebrow">Sürüm 1.0</span>
+      <h1 class="doc-name">Veri API'si</h1>
+      <p class="doc-dept">
+        Platformun anonim veri seti. Dış sistemler bu adreslere istek atarak
+        JSON veya CSV alır; giriş gerekmez.
+      </p>
+    </div>
+  </header>
+
+  <p class="notice">
+    <strong>Kişisel veri dönmez.</strong> Ad, e-posta, telefon ve transkript
+    bu API'de <em>yoktur</em>. Serileştirme katmanı veritabanı modelini değil,
+    açıkça seçilen alanları döndürür — modele yeni bir kolon eklendiğinde
+    yanlışlıkla dışarı sızmaması için.
+  </p>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Şu anki veri</h2>
+    <p class="doc-text">
+      {{ sayim.ogrenci }} öğrenci, {{ sayim.bolum }} bölüm,
+      {{ sayim.sertifika }} sertifika kaydı.
+      Veri her istekte canlı veritabanından üretilir.
+    </p>
+  </section>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Uç noktalar</h2>
+
+    {% for uc in uclar %}
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <div>
+            <span class="endpoint-verb">GET</span><span class="endpoint-path">{{ uc.yol }}</span>
+          </div>
+          <p class="endpoint-text">{{ uc.aciklama }}</p>
+        </div>
+        <div class="endpoint-actions">
+          <a class="btn btn-outline btn-sm" href="{{ uc.yol }}" target="_blank" rel="noopener">JSON</a>
+          {% if uc.csv %}
+            <a class="btn btn-primary btn-sm" href="{{ uc.yol }}?format=csv">CSV indir</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <div>
+          <span class="endpoint-verb">GET</span><span class="endpoint-path">/api/v1/ozet/detay</span>
+        </div>
+        <p class="endpoint-text">
+          Ayrıntılı metrikler: kayıt eğrisi, onay hunisi, mesaj hacmi.
+          <strong>API anahtarı gerektirir</strong> — <span class="mono-inline">X-API-Key</span>
+          başlığı olmadan 401 döner.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Filtreler</h2>
+    <p class="doc-text">
+      <span class="mono-inline">/api/v1/ogrenciler</span> adresi aşağıdaki
+      sorgu parametrelerini kabul eder. Birden fazlası birleştirilebilir ve
+      hepsi CSV çıktısıyla da çalışır.
+    </p>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Parametre</th><th>Değer</th><th>Ne yapar</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="mono-inline">page</span></td><td>1, 2, 3…</td><td>Sayfa numarası</td></tr>
+          <tr><td><span class="mono-inline">page_size</span></td><td>1–200</td><td>Sayfa başına kayıt (varsayılan 50)</td></tr>
+          <tr><td><span class="mono-inline">department</span></td><td>bölüm adı</td><td>Tek bölüme indirger</td></tr>
+          <tr><td><span class="mono-inline">skill</span></td><td>metin</td><td>Yetkinlik araması, büyük/küçük harf duyarsız</td></tr>
+          <tr><td><span class="mono-inline">has_transcript</span></td><td>1 / 0</td><td>Transkripti olan / olmayan</td></tr>
+          <tr><td><span class="mono-inline">verified</span></td><td>1 / 0</td><td>Transkripti doğrulanmış olanlar</td></tr>
+          <tr><td><span class="mono-inline">min_completion</span></td><td>0–100</td><td>Profil doluluğu eşiği</td></tr>
+          <tr><td><span class="mono-inline">format</span></td><td>csv</td><td>JSON yerine CSV indirir</td></tr>
+          <tr><td><span class="mono-inline">delimiter</span></td><td>comma</td><td>CSV ayırıcısını virgüle çevirir</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="doc-text">
+      Örnek — profili en az %25 dolu adayları Excel için indirir:
+    </p>
+    <pre class="codeblock">/api/v1/ogrenciler?min_completion=25&amp;format=csv</pre>
+  </section>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Yanıt biçimi</h2>
+    <p class="doc-text">
+      Her yanıt aynı iskelette döner — hata da dahil. Böylece istemci tek bir
+      ayrıştırıcı yazar: <span class="mono-inline">data</span> veriyi,
+      <span class="mono-inline">meta</span> veri hakkındaki bilgiyi (toplam,
+      sayfa), <span class="mono-inline">links</span> gezinme adreslerini taşır.
+    </p>
+    <pre class="codeblock">{
+  "data": [
+    {
+      "id": 34,
+      "department": "Fiber Teknolojisi",
+      "gpa": 3.20,
+      "profile_completion": 85,
+      "has_transcript": true,
+      "transcript_verified": false,
+      "education_count": 2,
+      "experience_count": 1,
+      "certificate_count": 3,
+      "verifiable_certificate_count": 2,
+      "project_count": 2,
+      "skills": ["Python", "Network"],
+      "registered_at": "2026-10-20"
+    }
+  ],
+  "meta":  { "total": 25, "page": 1, "page_size": 50, "total_pages": 1 },
+  "links": { "self": "...", "next": null, "prev": null }
+}</pre>
+  </section>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Kullanım</h2>
+    <p class="doc-text">
+      <strong>Excel:</strong> Veri → Veri Al → Web'den. Aşağıdaki adresi
+      yapıştırın; dosya indirilmez, tablo <em>canlı bağlanır</em> ve
+      “Yenile” dendiğinde sunucudan tazelenir.
+    </p>
+    <pre class="codeblock">{{ taban }}/api/v1/ogrenciler?format=csv</pre>
+
+    <p class="doc-text"><strong>Python (pandas):</strong></p>
+    <pre class="codeblock">import pandas as pd, requests
+
+veri = requests.get("{{ taban }}/api/v1/ogrenciler?page_size=200").json()
+df = pd.DataFrame(veri["data"])</pre>
+
+    <p class="doc-text"><strong>Korumalı uç nokta:</strong></p>
+    <pre class="codeblock">curl -H "X-API-Key: ANAHTAR" {{ taban }}/api/v1/ozet/detay</pre>
+  </section>
+
+  <section class="doc-section">
+    <h2 class="doc-section-label">Sınırlar</h2>
+    <ul class="checklist">
+      <li>Dakikada 120, saatte 2000 istek. Aşımda <span class="mono-inline">429</span> döner.</li>
+      <li>Yalnızca <span class="mono-inline">GET</span>. API salt-okunurdur; yazma uç noktası yoktur.</li>
+      <li>Yanıtlar 60 saniye önbelleklenebilir (<span class="mono-inline">Cache-Control</span>).</li>
+      <li>CORS açıktır: tarayıcıdaki JavaScript başka alan adından okuyabilir.</li>
+    </ul>
+  </section>
+</article>
+{% endblock %}

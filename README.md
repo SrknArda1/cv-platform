@@ -154,6 +154,11 @@ gerekmez).
 
 ## API (`/api/v1`)
 
+`/api` adresinde **insan için bir belge sayfası** vardır: uç noktaları
+listeler, ne döndürdüklerini anlatır, JSON bağlantısı ve CSV indirme
+düğmesi verir. Gerçek API'lerdeki Swagger/Redoc belgesinin karşılığı.
+Footer'dan erişilir.
+
 Dış sistemlerin veriyi program olarak okuyabilmesi için REST API katmanı.
 Ayrı dosyada (`api.py`) bir **Blueprint** olarak durur; mevcut HTML
 sayfalarına hiç dokunmaz. Sayfalar insana, API makineye konuşur.
