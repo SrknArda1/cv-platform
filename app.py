@@ -1422,13 +1422,19 @@ if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "1") != "0"
     port = int(os.environ.get("PORT", 5000))
 
+    # Dinlenecek adres ortamdan okunur; varsayilan olarak yalnizca yerel
+    # makineye (127.0.0.1) baglanir. Disa acmak gerektiginde (konteyner,
+    # tunel) HOST=0.0.0.0 ortam degiskeni verilir -- ama o zaman debug
+    # kapali ve SECRET_KEY ayarlanmis olmalidir (asagidaki kontrol).
+    host = os.environ.get("HOST", "127.0.0.1")
+
     if not debug and app.config["SECRET_KEY"] == "dev-secret-anahtari-degistir":
         raise SystemExit(
             "SECRET_KEY ayarlanmamis. Disa acik calistirmadan once ortam "
             "degiskeni olarak guclu ve rastgele bir deger verin."
         )
 
-    app.run(debug=debug, host="0.0.0.0", port=port)
+    app.run(debug=debug, host=host, port=port)
     
 @app.cli.command("approve-company")
 def approve_company():
