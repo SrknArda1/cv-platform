@@ -234,6 +234,32 @@ export API_ANAHTARI="uzun-rastgele-bir-dize"
 curl -H "X-API-Key: uzun-rastgele-bir-dize" https://SUNUCU/api/v1/ozet/detay
 ```
 
+## Testler
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+**111 test**, üç dosyada:
+
+| Dosya | Ne denetler |
+|---|---|
+| `tests/test_api.py` | 54 — JSON sözleşmesi, **kişisel veri sızıntısı**, filtreler, sayfalama, API anahtarı, CSV |
+| `tests/test_duman.py` | 33 — her rol için sayfalar açılıyor mu, yetkiler tutuyor mu |
+| `tests/test_sertifika.py` | 24 — adres şema denetimi, sertifika alanları, PDF çıktısı |
+
+Testler `DATA_DIR`'i geçici bir klasöre yönlendirir; **gerçek veritabanına
+dokunulmaz**. Ortam değişkenleri `tests/conftest.py` içinde, `app` içe
+aktarılmadan **önce** ayarlanır — `app.py` `DATA_DIR`'i modül seviyesinde
+okuduğu için sonradan değiştirmek geç kalır.
+
+> `conftest.py`'deki `uygulama` fixture'ı uygulama bağlamını testin tamamı
+> boyunca **açık tutmaz**. Flask-Login giriş yapan kullanıcıyı `g` üzerinde
+> önbelleğe alır ve `g` uygulama bağlamına bağlıdır; bağlam açık kalsaydı
+> test istemcisinin tüm istekleri aynı kullanıcıyı görür ve yetki testleri
+> yanlış yere geçerdi. Model sorgusu gereken testler kendi bağlamını açar.
+
 ## Dağıtım
 
 Sunucuya kurulum adımları ayrı bir dosyada: **[DAGITIM.md](DAGITIM.md)**

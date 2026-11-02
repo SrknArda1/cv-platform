@@ -1,0 +1,5 @@
+# Gelistirme ve test bagimliliklari.
+# Sunucuya KURULMAZ -- uretim icin requirements.txt yeterli.
+-r requirements.txt
+pytest==9.2.0
+pypdf==6.19.0
