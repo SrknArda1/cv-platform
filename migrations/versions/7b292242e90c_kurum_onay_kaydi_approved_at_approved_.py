@@ -8,7 +8,7 @@ Not: Alembic yabanci anahtar kisitini isimsiz uretmisti; downgrade() o
 haliyle calismaz (isimsiz kisit dusurulemez). Kisita acik bir ad verildi.
 
 Revision ID: 7b292242e90c
-Revises:
+Revises: 3fbf04b1f979
 Create Date: 2026-10-12 22:27:11.180880
 
 """
@@ -18,7 +18,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '7b292242e90c'
-down_revision = None
+down_revision = '3fbf04b1f979'
 branch_labels = None
 depends_on = None
 

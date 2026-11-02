@@ -241,13 +241,14 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-**111 test**, üç dosyada:
+**114 test**, dört dosyada:
 
 | Dosya | Ne denetler |
 |---|---|
 | `tests/test_api.py` | 54 — JSON sözleşmesi, **kişisel veri sızıntısı**, filtreler, sayfalama, API anahtarı, CSV |
 | `tests/test_duman.py` | 33 — her rol için sayfalar açılıyor mu, yetkiler tutuyor mu |
 | `tests/test_sertifika.py` | 24 — adres şema denetimi, sertifika alanları, PDF çıktısı |
+| `tests/test_goc.py` | 3 — boş veritabanından `db upgrade`, mevcut veritabanına dokunulmaması |
 
 Testler `DATA_DIR`'i geçici bir klasöre yönlendirir; **gerçek veritabanına
 dokunulmaz**. Ortam değişkenleri `tests/conftest.py` içinde, `app` içe
@@ -298,9 +299,19 @@ venv/Scripts/flask --app app db upgrade
 > kod her zaman doğru olmuyor; örneğin ilk migrasyonda `downgrade()` isimsiz
 > bir yabancı anahtar kısıtı düşürmeye çalışıyordu ve o haliyle çalışmazdı.
 
-> Sıfırdan oluşturulan veritabanlarında şema `db.create_all()` ile gelir;
-> böyle bir veritabanını `flask --app app db stamp head` ile güncel
-> işaretleyin, yoksa `upgrade` var olan kolonları eklemeye çalışır.
+> **Boş veritabanında** (yeni bilgisayar) `flask --app app db upgrade` şemayı
+> sıfırdan kurar. Zincirin ilk adımı `3fbf04b1f979` Flask-Migrate öncesi
+> tabloları oluşturur; daha önce tablolar `create_all()` ile kurulduğu için
+> bu adım yoktu ve ilk göç `NoSuchTableError: user` veriyordu. Mevcut
+> veritabanlarında (canlı dahil) bu adım çalışmaz: Alembic zaten geçilmiş
+> sürümleri yeniden çalıştırmaz (`tests/test_goc.py` bunu sınar).
+>
+> `python app.py` ile ilk açılışta `create_all()` yapılmış bir veritabanı
+> varsa `flask --app app db stamp head` ile güncel işaretleyin, yoksa
+> `upgrade` var olan tabloları yeniden oluşturmaya çalışır.
+>
+> ⚠️ `flask db downgrade base` artık **bütün tabloları siler**; gerçek
+> verisi olan bir veritabanında çalıştırmayın.
 
 ### Yönetici hesabı nasıl açılır
 

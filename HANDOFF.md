@@ -19,7 +19,7 @@ PythonAnywhere ücretsiz katmanda canlı.
 | API | https://srknarda1.pythonanywhere.com/api |
 | Kod | `app.py` 1.647 satır · `api.py` 547 · `models.py` 280 · `style.css` 1.993 |
 | Rotalar | 34 HTML + 7 JSON |
-| Tablolar | 7 · Göçler: 6 |
+| Tablolar | 7 · Göçler: 7 |
 | Gerçek veri | 25 öğrenci, 2 kurum, 22 sertifika |
 
 Canlı veri durumu (2026-11-02): 10 öğrencinin transkripti var ama **hiçbiri
@@ -137,7 +137,7 @@ Tahminle hareket etmeyin.
 
 ## Testler
 
-`pytest` ile **111 test** (`tests/`). Gerçek veritabanına dokunmazlar;
+`pytest` ile **114 test** (`tests/`). Gerçek veritabanına dokunmazlar;
 `DATA_DIR` geçici klasöre yönlendirilir.
 
 ```bash
