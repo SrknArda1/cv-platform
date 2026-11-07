@@ -20,6 +20,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 
 import logging
 
+import click
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
@@ -27,7 +28,7 @@ from flask_limiter.util import get_remote_address
 
 from models import (db, User, Education, Experience, Certificate, Project,
                     Department, Message)
-from api import api as api_blueprint, hata_yaniti as api_hata_yaniti
+from api import api as api_blueprint, hata_yaniti as api_hata_yaniti, ogrenci_sorgusu
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -79,7 +80,7 @@ try:
     DEFAULT_FONT["dejavuserif"] = "DejaVuSerif"
     DEFAULT_FONT["dejavusansmono"] = "DejaVuSansMono"
 except Exception as _font_hata:        # font yoksa PDF yine uretilir, varsayilana duser
-    print(f"[uyari] PDF fontu yuklenemedi: {_font_hata}")
+    logging.getLogger("pdf").warning("PDF fontu yuklenemedi: %s", _font_hata)
 
 TRANSCRIPT_FOLDER = os.path.join(DATA_DIR, "uploads", "transcripts")
 PHOTO_FOLDER = os.path.join(DATA_DIR, "uploads", "photos")
@@ -754,7 +755,9 @@ def company_dashboard():
         sort = "name"
     direction = "desc" if request.args.get("dir") == "desc" else "asc"
 
-    query = User.query.filter_by(role="student")
+    # Doluluk ve ortalama iliskili tablolardan hesaplanir; ogrenci_sorgusu()
+    # olmadan her ogrenci icin ayri sorgu calisirdi (N+1).
+    query = ogrenci_sorgusu()
     if selected_department:
         query = query.filter_by(department=selected_department)
     if q:
@@ -1176,7 +1179,7 @@ def admin_revoke_company(company_id):
 @role_required("admin")
 def admin_overview():
     """Koordinatorun giris ekrani: platformun tek bakista ozeti."""
-    students = User.query.filter_by(role="student").all()
+    students = ogrenci_sorgusu().all()
     companies = User.query.filter_by(role="company").all()
     departments = Department.query.order_by(Department.name).all()
 
@@ -1218,7 +1221,7 @@ def admin_students():
     q = request.args.get("q", "").strip()
     durum = request.args.get("durum", "")
 
-    query = User.query.filter_by(role="student")
+    query = ogrenci_sorgusu()
     if q:
         like = f"%{q}%"
         query = query.filter(db.or_(User.full_name.ilike(like), User.email.ilike(like)))
@@ -1398,10 +1401,9 @@ app.register_blueprint(api_blueprint)
 # katmanin gunluk CPU butcesi tukenir ve SITE TAMAMEN durur.
 limiter.limit("120 per minute; 2000 per hour")(api_blueprint)
 
-# CSRF korumasi yalnizca durum degistiren metotlar icindir ve cerez tabanli
-# oturuma dayanir. API salt-okunur ve cerezsiz oldugu icin konu disi; yine de
-# acikca muaf tutuluyor ki ileride POST eklenirse bilincli bir karar olsun.
-csrf.exempt(api_blueprint)
+# API CSRF'ten muaf DEGIL: CSRF yalnizca durum degistiren metotlara uygulanir ve
+# API'de yalnizca GET var, muafiyete gerek yok. Ileride POST eklenirse varsayilan
+# olarak korumali gelir; muafiyet ancak bilincli bir kararla eklenir.
 
 
 def create_app():
@@ -1441,27 +1443,27 @@ def approve_company():
     """Onay bekleyen kurumları listeler ve onaylama imkanı verir."""
     pending = User.query.filter_by(role="company", is_approved=False).all()
     if not pending:
-        print("Onay bekleyen kurum bulunmuyor.")
+        click.echo("Onay bekleyen kurum bulunmuyor.")
         return
 
-    print("\n--- Onay Bekleyen Kurumlar ---")
+    click.echo("\n--- Onay Bekleyen Kurumlar ---")
     for c in pending:
-        print(f"ID: {c.id} | Şirket: {c.company_name} | Yetkili: {c.contact_person} | E-posta: {c.email}")
+        click.echo(f"ID: {c.id} | Şirket: {c.company_name} | Yetkili: {c.contact_person} | E-posta: {c.email}")
     
     comp_id = input("\nOnaylamak istediğiniz Kurum ID'sini girin (Tümünü onaylamak için 'all'): ").strip()
     if comp_id == "all":
         for c in pending:
             c.is_approved = True
         db.session.commit()
-        print("Tüm kurumlar onaylandı.")
+        click.echo("Tüm kurumlar onaylandı.")
     elif comp_id.isdigit():
         target = User.query.get(int(comp_id))
         if target and target.role == "company":
             target.is_approved = True
             db.session.commit()
-            print(f"{target.company_name} başarıyla onaylandı.")
+            click.echo(f"{target.company_name} başarıyla onaylandı.")
         else:
-            print("Geçersiz kurum ID.")
+            click.echo("Geçersiz kurum ID.")
 
 
 @app.cli.command("create-admin")
@@ -1475,21 +1477,21 @@ def create_admin():
 
     email = input("Yonetici e-postasi: ").strip().lower()
     if not email:
-        print("E-posta bos olamaz.")
+        click.echo("E-posta bos olamaz.")
         return
 
     if User.query.filter_by(email=email).first():
-        print(f"'{email}' ile zaten bir hesap var.")
+        click.echo(f"'{email}' ile zaten bir hesap var.")
         return
 
     full_name = input("Ad soyad: ").strip() or "Kampus Koordinatoru"
 
     password = getpass.getpass("Sifre (en az 6 karakter): ")
     if len(password) < 6:
-        print("Sifre en az 6 karakter olmali.")
+        click.echo("Sifre en az 6 karakter olmali.")
         return
     if password != getpass.getpass("Sifre (tekrar): "):
-        print("Sifreler eslesmiyor.")
+        click.echo("Sifreler eslesmiyor.")
         return
 
     db.session.add(User(
@@ -1499,8 +1501,8 @@ def create_admin():
         full_name=full_name,
     ))
     db.session.commit()
-    print(f"Yonetici olusturuldu: {email}")
-    print("Giris: /admin/giris")
+    click.echo(f"Yonetici olusturuldu: {email}")
+    click.echo("Giris: /admin/giris")
 
 
 @app.cli.command("seed-demo")
@@ -1517,7 +1519,7 @@ def seed_demo():
     from datetime import timedelta
 
     if User.query.filter(User.email.like("%@ornek.edu.tr")).first():
-        print("Demo verisi zaten var. Once temizlemek icin: flask --app app clear-demo")
+        click.echo("Demo verisi zaten var. Once temizlemek icin: flask --app app clear-demo")
         return
 
     random.seed(42)   # her calistirmada ayni sonuc
@@ -1634,11 +1636,11 @@ def seed_demo():
         ))
 
     db.session.commit()
-    print(f"{olusan} uydurma ogrenci olusturuldu.")
-    print("  Kurum (onayli) : demo@ornek.com / demo1234")
-    print("  Kurum (bekleyen): bekleyen@ornek.com")
-    print("  Ogrenci         : ogrenci01@ornek.edu.tr / demo1234")
-    print("\nYonetici hesabi ayrica olusturulmali: flask --app app create-admin")
+    click.echo(f"{olusan} uydurma ogrenci olusturuldu.")
+    click.echo("  Kurum (onayli) : demo@ornek.com / demo1234")
+    click.echo("  Kurum (bekleyen): bekleyen@ornek.com")
+    click.echo("  Ogrenci         : ogrenci01@ornek.edu.tr / demo1234")
+    click.echo("\nYonetici hesabi ayrica olusturulmali: flask --app app create-admin")
 
 
 @app.cli.command("clear-demo")
@@ -1650,4 +1652,4 @@ def clear_demo():
     for u in demo:
         db.session.delete(u)      # cascade ile CV kayitlari da gider
     db.session.commit()
-    print(f"{len(demo)} demo kaydi silindi.")
+    click.echo(f"{len(demo)} demo kaydi silindi.")

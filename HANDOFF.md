@@ -137,7 +137,7 @@ Tahminle hareket etmeyin.
 
 ## Testler
 
-`pytest` ile **114 test** (`tests/`). Gerçek veritabanına dokunmazlar;
+`pytest` ile **121 test** (`tests/`). Gerçek veritabanına dokunmazlar;
 `DATA_DIR` geçici klasöre yönlendirilir.
 
 ```bash
@@ -158,9 +158,12 @@ Kapsanmayanlar: mesajlaşma akışı, yönetici onay/ret işlemleri, dosya yükl
 | KVKK metni eksik | Hukuki eksik | Kurumun ilgili birimi yazmalı |
 | SQLite tek yazar | Yüksek eşzamanlı yazımda kilit | PostgreSQL; ORM kullanıldığı için kod değişmez |
 
-**Ölçülmüş rakam:** 2.000 öğrencide ortalamaya göre sıralama **1.229 ms**
-(N+1 sorgu). API'de `selectinload` ile çözüldü
-([api.py:273](api.py#L273)); aday havuzu sayfasına da uygulanmalı.
+**Ölçülmüş rakam (2026-11-05):** 2.000 öğrencide aday havuzu ve yönetici sayfaları
+**6.000 sorgudan 21'e**, ~2.500 ms'den 130-240 ms'ye indi. Çözüm her yerde aynı:
+`ogrenci_sorgusu()` ile `selectinload`. Bedeli: 2.000 öğrencide varsayılan
+aday havuzu 66 ms'den 150 ms'ye çıkıyor (25 ve 200 öğrencide yine de daha hızlı).
+Sorguya hâlâ yabancı anahtar indeksi eklenebilir; göç gerektirdiği için yapılmadı.
+Fonksiyon: [api.py:265](api.py#L265).
 
 ---
 
@@ -171,9 +174,8 @@ Kapsanmayanlar: mesajlaşma akışı, yönetici onay/ret işlemleri, dosya yükl
 1. **Telefon görünürlüğünü hocaya sor**, cevaba göre uygula.
 2. **Worktree'yi sil** — gerçek kişisel veri kopyaları diskte duruyor.
 3. **Şifre sıfırlama** (yönetici eliyle).
-4. **Aday havuzuna `selectinload`** — API'deki düzeltmenin aynısı.
-5. **Bölüm listesini netleştir** ve `department_id` göçünü planla.
-6. **Testleri genişlet** — mesajlaşma ve yönetici işlemleri henüz kapsanmıyor.
+4. **Bölüm listesini netleştir** ve `department_id` göçünü planla.
+5. **Testleri genişlet** — mesajlaşma ve yönetici işlemleri henüz kapsanmıyor.
 
 ---
 

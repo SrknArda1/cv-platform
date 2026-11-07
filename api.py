@@ -262,7 +262,7 @@ def ogrenci_kaydi(ogrenci):
     }
 
 
-def _ogrenci_sorgusu():
+def ogrenci_sorgusu():
     """Ogrenci sorgusu + iliskilerin tek seferde yuklenmesi.
 
     selectinload olmasaydi her ogrenci icin ayri ayri egitim/deneyim/sertifika/
@@ -315,7 +315,7 @@ def kok():
 @api.route("/ozet")
 def ozet():
     """Tek bakista sayimlar -- analiz icin giris noktasi."""
-    ogrenciler = _ogrenci_sorgusu().all()
+    ogrenciler = ogrenci_sorgusu().all()
     ortalamalar = [o.gpa_value for o in ogrenciler if o.gpa_value is not None]
     sertifika_sayisi = Certificate.query.count()
     dogrulanabilir = Certificate.query.filter(
@@ -360,7 +360,7 @@ def ogrenciler():
     if mesaj:
         return hata(422, "invalid_parameter", mesaj)
 
-    sorgu = _ogrenci_sorgusu()
+    sorgu = ogrenci_sorgusu()
     bolum = (request.args.get("department") or "").strip()
     if bolum:
         sorgu = sorgu.filter(User.department == bolum)
@@ -415,7 +415,7 @@ def ogrenciler():
 
 @api.route("/ogrenciler/<int:ogrenci_id>")
 def ogrenci(ogrenci_id):
-    kayit = _ogrenci_sorgusu().filter(User.id == ogrenci_id).first()
+    kayit = ogrenci_sorgusu().filter(User.id == ogrenci_id).first()
     if kayit is None:
         return hata(404, "not_found", f"{ogrenci_id} numarali ogrenci bulunamadi.")
     return yanit(ogrenci_kaydi(kayit),
@@ -425,7 +425,7 @@ def ogrenci(ogrenci_id):
 @api.route("/bolumler")
 def bolumler():
     """Bolum bazinda dagilim -- ogrenci sayisi ve ortalama gostergeler."""
-    ogrenciler_ = _ogrenci_sorgusu().all()
+    ogrenciler_ = ogrenci_sorgusu().all()
     sonuc = []
     for bolum in Department.query.order_by(Department.name).all():
         kume = [o for o in ogrenciler_ if o.department == bolum.name]
@@ -457,7 +457,7 @@ def bolumler():
 def yetkinlikler():
     """Yetkinlik frekansi -- analiz icin en verimli uc nokta."""
     sayim = {}
-    for o in _ogrenci_sorgusu().all():
+    for o in ogrenci_sorgusu().all():
         for y in _yetkinlikler(o.skills):
             anahtar = y.lower()
             girdi = sayim.setdefault(anahtar, {"name": y, "student_count": 0})
@@ -482,7 +482,7 @@ def ozet_detay():
     koruma, verinin degeri kadar KIMLIK DOGRULAMA KATMANINI gostermek icin de
     var.
     """
-    ogrenciler_ = _ogrenci_sorgusu().all()
+    ogrenciler_ = ogrenci_sorgusu().all()
 
     aylik = {}
     for o in User.query.all():

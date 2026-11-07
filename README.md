@@ -241,7 +241,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-**114 test**, dört dosyada:
+**121 test**, beş dosyada:
 
 | Dosya | Ne denetler |
 |---|---|
@@ -249,6 +249,7 @@ pytest
 | `tests/test_duman.py` | 33 — her rol için sayfalar açılıyor mu, yetkiler tutuyor mu |
 | `tests/test_sertifika.py` | 24 — adres şema denetimi, sertifika alanları, PDF çıktısı |
 | `tests/test_goc.py` | 3 — boş veritabanından `db upgrade`, mevcut veritabanına dokunulmaması |
+| `tests/test_performans.py` | 7 — N+1 koruması (sorgu sayısı öğrenci sayısıyla artmaz), API'nin salt okunur olması, CLI çıktısı |
 
 Testler `DATA_DIR`'i geçici bir klasöre yönlendirir; **gerçek veritabanına
 dokunulmaz**. Ortam değişkenleri `tests/conftest.py` içinde, `app` içe
