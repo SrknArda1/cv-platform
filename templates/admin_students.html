@@ -8,7 +8,7 @@
     <h1 class="page-title">Öğrenciler</h1>
   </div>
   <p class="count">
-    <strong>{{ students|length }}</strong> öğrenci
+    <strong data-live-count>{{ students|length }}</strong> öğrenci
     {%- if q or durum %} &middot; {{ toplam }} kayıt içinden filtrelendi{% endif -%}
   </p>
 </div>
@@ -16,8 +16,9 @@
 <form method="GET" class="toolbar">
   <div class="field toolbar-grow">
     <label class="label" for="f-q">Ara</label>
+    {# data-live-search: yazdıkça tabloyu tarayıcıda süzer (main.js initLiveSearch) #}
     <input class="input input-search" type="search" id="f-q" name="q" value="{{ q }}"
-           placeholder="İsim veya e-posta">
+           placeholder="İsim veya e-posta" data-live-search="ogrenci-tablosu">
   </div>
 
   <div class="field toolbar-fixed">
@@ -40,7 +41,7 @@
 
 {% if students %}
 <div class="table-wrap">
-  <table class="table">
+  <table class="table" id="ogrenci-tablosu">
     <thead>
       <tr>
         <th>Öğrenci</th>

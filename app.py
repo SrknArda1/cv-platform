@@ -1662,3 +1662,139 @@ def clear_demo():
         db.session.delete(u)      # cascade ile CV kayitlari da gider
     db.session.commit()
     click.echo(f"{len(demo)} demo kaydi silindi.")
+
+
+# ---------------------------------------------------------------------------
+# Ana veri gocu: bolum listesini CSV'den ice aktarma
+# ---------------------------------------------------------------------------
+
+def bolum_anahtari(ad):
+    """Mukerrer kontrolu icin karsilastirma anahtari.
+
+    "Kurumsal  Bilişim", "kurumsal bilişim" ve "KURUMSAL BİLİŞİM" ayni bolumdur.
+    Turkce I/İ casefold'da dogru donmedigi icin once elle cevrilir.
+    """
+    ad = unicodedata.normalize("NFC", ad or "")
+    ad = ad.replace("I", "ı").replace("İ", "i")
+    return re.sub(r"\s+", " ", ad).strip().casefold()
+
+
+@app.cli.command("bolum-ice-aktar")
+@click.argument("dosya", type=click.Path(exists=True, dir_okay=False))
+@click.option("--kuru", is_flag=True,
+              help="Hicbir sey yazmadan yalnizca ne olacagini raporla.")
+def bolum_ice_aktar(dosya, kuru):
+    """Bolum listesini CSV'den aktarir (ana veri gocu).
+
+    Dosyada 'name' (veya 'bolum') kolonu olmali; ';' ve ',' ayiricilari
+    otomatik taninir. Bos satirlar, dosya icindeki tekrarlar ve veritabaninda
+    zaten olan bolumler (buyuk/kucuk harf ve bosluk farki dahil) atlanir.
+    Ya hepsi yazilir ya hicbiri: tek commit.
+    """
+    import csv
+
+    with open(dosya, encoding="utf-8-sig", newline="") as f:
+        ornek = f.read(4096)
+        f.seek(0)
+        try:
+            lehce = csv.Sniffer().sniff(ornek, delimiters=";,")
+        except csv.Error:
+            lehce = csv.excel  # Tek kolonlu dosyada ayirici bulunamaz
+        okuyucu = csv.DictReader(f, dialect=lehce)
+        kolonlar = {(k or "").strip().lower(): k for k in (okuyucu.fieldnames or [])}
+        kolon = kolonlar.get("name") or kolonlar.get("bolum") or kolonlar.get("bölüm")
+        if not kolon:
+            raise click.ClickException(
+                f"'name' veya 'bolum' kolonu bulunamadi. Kolonlar: {okuyucu.fieldnames}")
+        satirlar = [(satir.get(kolon) or "") for satir in okuyucu]
+
+    mevcut = {bolum_anahtari(d.name): d.name for d in Department.query.all()}
+    eklenecek, zaten_var, dosyada_tekrar, bos = [], [], [], 0
+    gorulen = {}
+
+    for ham in satirlar:
+        ad = re.sub(r"\s+", " ", ham).strip()
+        if not ad:
+            bos += 1
+            continue
+        anahtar = bolum_anahtari(ad)
+        if anahtar in mevcut:
+            zaten_var.append(f"{ad} (kayitli: {mevcut[anahtar]})")
+        elif anahtar in gorulen:
+            dosyada_tekrar.append(f"{ad} (ilk hali: {gorulen[anahtar]})")
+        else:
+            gorulen[anahtar] = ad
+            eklenecek.append(ad)
+
+    # Department.name String(120); uzun ad tum aktarimi durdurur, kirpilmaz
+    if any(len(ad) > 120 for ad in eklenecek):
+        raise click.ClickException("120 karakteri asan bolum adi var; hicbir sey yazilmadi.")
+
+    click.echo(f"Okunan satir       : {len(satirlar)}")
+    click.echo(f"Eklenecek          : {len(eklenecek)}")
+    for ad in eklenecek:
+        click.echo(f"  + {ad}")
+    click.echo(f"Zaten kayitli      : {len(zaten_var)}")
+    for ad in zaten_var:
+        click.echo(f"  = {ad}")
+    click.echo(f"Dosyada tekrar     : {len(dosyada_tekrar)}")
+    for ad in dosyada_tekrar:
+        click.echo(f"  x {ad}")
+    click.echo(f"Bos satir          : {bos}")
+
+    if kuru:
+        click.echo("Kuru calistirma: veritabanina hicbir sey yazilmadi.")
+        return
+
+    db.session.add_all(Department(name=ad) for ad in eklenecek)
+    db.session.commit()
+    click.echo(f"{len(eklenecek)} bolum eklendi.")
+
+
+# ---------------------------------------------------------------------------
+# Zamanlanmis gorev: veritabani yedegi
+# ---------------------------------------------------------------------------
+
+@app.cli.command("yedekle")
+@click.option("--sakla", default=7, show_default=True, type=click.IntRange(min=1),
+              help="Klasorde tutulacak en yeni yedek sayisi; eskiler silinir.")
+def yedekle(sakla):
+    """Veritabaninin tutarli bir kopyasini DATA_DIR/yedekler altina alir.
+
+    PythonAnywhere'de "Tasks" sekmesinden gunluk zamanlanmis gorev olarak
+    calistirilmak icin yazildi. Dosyayi kopyalamak yerine SQLite'in yedekleme
+    API'si kullanilir: yazma o sirada devam etse bile yarim kopya olusmaz.
+    Yuklenen dosyalar (uploads) bu yedege dahil degildir.
+    """
+    import sqlite3
+
+    kaynak_yolu = db.engine.url.database
+    klasor = os.path.join(DATA_DIR, "yedekler")
+    os.makedirs(klasor, exist_ok=True)
+    hedef_yolu = os.path.join(
+        klasor, f"cv_platform-{datetime.now():%Y%m%d-%H%M%S}.db")
+
+    kaynak = sqlite3.connect(kaynak_yolu)
+    hedef = sqlite3.connect(hedef_yolu)
+    try:
+        with hedef:
+            kaynak.backup(hedef)
+        durum = hedef.execute("PRAGMA integrity_check").fetchone()[0]
+    finally:
+        hedef.close()
+        kaynak.close()
+
+    if durum != "ok":
+        os.remove(hedef_yolu)
+        raise click.ClickException(f"Yedek butunluk denetiminden gecmedi: {durum}")
+
+    yedekler = sorted(f for f in os.listdir(klasor)
+                      if f.startswith("cv_platform-") and f.endswith(".db"))
+    silinen = yedekler[:-sakla]
+    for ad in silinen:
+        os.remove(os.path.join(klasor, ad))
+
+    boyut_kb = os.path.getsize(hedef_yolu) / 1024
+    click.echo(f"Yedek alindi: {hedef_yolu} ({boyut_kb:.0f} KB, butunluk: ok)")
+    if silinen:
+        click.echo(f"{len(silinen)} eski yedek silindi; {sakla} yedek tutuluyor.")

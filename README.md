@@ -247,7 +247,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-**128 test**, altı dosyada:
+**147 test**, sekiz dosyada:
 
 | Dosya | Ne denetler |
 |---|---|
@@ -257,6 +257,8 @@ pytest
 | `tests/test_goc.py` | 3 — boş veritabanından `db upgrade`, mevcut veritabanına dokunulmaması |
 | `tests/test_performans.py` | 7 — N+1 koruması (sorgu sayısı öğrenci sayısıyla artmaz), API'nin salt okunur olması, CLI çıktısı |
 | `tests/test_hiz_siniri.py` | 7 — sayfa, giriş, fotoğraf ve API sınırları, statik dosyaların sayılmaması, IP ayrımı |
+| `tests/test_araclar.py` | 17 — bölüm içe aktarma (mükerrer, kuru çalıştırma), yedek ve yedek döndürme, pandas ABC raporu, kayıt tahmini (MAPE/bias), sayfalardaki JS bağlantıları |
+| `tests/test_akis.py` | 2 — uçtan uca akış: kurum başvurusu → onay → aday havuzu → CV/PDF → mesaj → öğrenci cevabı; reddedilen kurumun akışa girememesi |
 
 Testler `DATA_DIR`'i geçici bir klasöre yönlendirir; **gerçek veritabanına
 dokunulmaz**. Ortam değişkenleri `tests/conftest.py` içinde, `app` içe
@@ -268,6 +270,64 @@ okuduğu için sonradan değiştirmek geç kalır.
 > önbelleğe alır ve `g` uygulama bağlamına bağlıdır; bağlam açık kalsaydı
 > test istemcisinin tüm istekleri aynı kullanıcıyı görür ve yetki testleri
 > yanlış yere geçerdi. Model sorgusu gereken testler kendi bağlamını açar.
+
+## Araçlar: rapor, ana veri aktarımı, yedek
+
+### Tarayıcı tarafı (JavaScript)
+
+| Nerede | Ne yapar | Dosya |
+|---|---|---|
+| Yönetici › Genel Bakış | `fetch` ile `/api/v1/yetkinlikler`'i çeker, ABC (Pareto) sınıflarını hesaplar, Chart.js ile çubuk + kümülatif % çizgisi çizer | `static/admin_charts.js`, `static/vendor/chart.umd.min.js` (4.4.1, CDN'siz: internet olmadan da çalışır) |
+| Öğrenci › Özgeçmişim | Yazdıkça profil doluluğunu yeniden hesaplar; kural `User.profile_completion()` ile aynı | `static/main.js` `initLiveCompletion` |
+| Yönetici › Öğrenciler | Arama kutusu yazıldıkça tabloyu sayfa yenilemeden süzer; "Filtrele" sunucu araması olarak kalır | `static/main.js` `initLiveSearch` |
+| Kayıt formları, Özgeçmişim | Anlık uyarılar: 10 MB'ı aşan dosya ve eşleşmeyen şifre formu **engeller** (sunucu da reddeder); geçersiz not ve bitiş yılı < başlangıç yılı yalnızca **uyarır** | `static/main.js` `initFileSizeGuard`, `initPasswordMatch`, `initCvRowWarnings` |
+
+### Yetkinlik raporu (pandas)
+
+API'nin CSV çıktısını okuyup yetkinlikler için **ABC analizi** (ilk %80 A,
+%80–95 B, kalan C), bölüm özeti (ortalama not, doluluk, transkript oranı) ve
+**aylık kayıt talebi tahmini** üretir. Tahmin 3 aylık hareketli ortalamadır;
+geçmiş aylarda doğruluğu **MAPE** (ortalama mutlak yüzde hata) ve **bias**
+(ortalama tahmin − gerçek; artı = fazla tahmin) ile ölçülür. Amaç
+koordinatörün transkript doğrulama iş yükünü önceden görmek. Veritabanına değil yayınlanan API'ye bağlanır; kişisel veri görmez.
+
+```bash
+python araclar/yetkinlik_raporu.py                       # yerel sunucu açıkken
+python araclar/yetkinlik_raporu.py --kaynak ogrenciler.csv
+```
+
+Çıktı ekrana ve `rapor/` klasörüne (`yetkinlik_abc.csv`, `bolum_ozeti.csv`,
+`kayit_tahmini.csv`;
+Excel'de doğrudan açılır). pandas yalnızca `requirements-dev.txt`'te.
+
+### Bölüm listesini CSV'den aktarma (ana veri göçü)
+
+```bash
+flask --app app bolum-ice-aktar bolumler.csv --kuru   # önce ne olacağını gör
+flask --app app bolum-ice-aktar bolumler.csv
+```
+
+`name` ya da `bolum` kolonu aranır; `;` ve `,` ayırıcıları tanınır. Boş
+satırlar, dosya içi tekrarlar ve **zaten kayıtlı** bölümler atlanır —
+büyük/küçük harf, fazla boşluk ve Türkçe İ/ı farkı aynı bölüm sayılır
+("KURUMSAL BİLİŞİM" = "Kurumsal Bilişim"). Ya hepsi yazılır ya hiçbiri.
+
+### Veritabanı yedeği (zamanlanmış görev)
+
+```bash
+flask --app app yedekle            # DATA_DIR/yedekler/ altına, son 7'yi tutar
+flask --app app yedekle --sakla 14
+```
+
+SQLite'ın yedekleme API'siyle alınır (yazma sürerken bile tutarlı) ve
+`integrity_check`'ten geçmezse silinir. **Yüklenen dosyalar dahil değildir.**
+PythonAnywhere'de *Tasks* sekmesinde günlük görev olarak:
+
+```bash
+cd ~/cv-platform && DATA_DIR=~/kariyer-veri venv/bin/flask --app app yedekle
+```
+
+(Klasör ve venv yolları sunucudaki gerçek yollarla kontrol edilmeli.)
 
 ## Dağıtım
 

@@ -15,6 +15,10 @@ ENV/
 *.db
 *.sqlite
 *.sqlite3
+# flask yedekle'nin klasoru (yerelde DATA_DIR proje klasorudur)
+yedekler/
+# araclar/yetkinlik_raporu.py ciktilari (gercek veriden uretilebilir)
+rapor/
 
 # --- Ortam değişkenleri / gizli anahtarlar ---
 .env

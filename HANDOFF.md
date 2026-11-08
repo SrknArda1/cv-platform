@@ -137,7 +137,7 @@ Tahminle hareket etmeyin.
 
 ## Testler
 
-`pytest` ile **128 test** (`tests/`). Gerçek veritabanına dokunmazlar;
+`pytest` ile **147 test** (`tests/`). Gerçek veritabanına dokunmazlar;
 `DATA_DIR` geçici klasöre yönlendirilir.
 
 ```bash
@@ -145,7 +145,8 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-Kapsanmayanlar: mesajlaşma akışı, yönetici onay/ret işlemleri, dosya yükleme.
+Mesajlaşma ve kurum onay/ret akışı `tests/test_akis.py` ile uçtan uca sınanıyor.
+Kapsanmayan: dosya yükleme (transkript/fotoğraf).
 
 ## Bilinen teknik borç
 
@@ -171,11 +172,13 @@ Fonksiyon: [api.py:265](api.py#L265).
 
 Öncelik sırasıyla:
 
-1. **Telefon görünürlüğünü hocaya sor**, cevaba göre uygula.
-2. **Worktree'yi sil** — gerçek kişisel veri kopyaları diskte duruyor.
-3. **Şifre sıfırlama** (yönetici eliyle).
-4. **Bölüm listesini netleştir** ve `department_id` göçünü planla.
-5. **Testleri genişlet** — mesajlaşma ve yönetici işlemleri henüz kapsanmıyor.
+1. **PythonAnywhere'de günlük yedek görevi kur** (`flask yedekle`, komut README
+   "Araçlar" bölümünde). Komut hazır ama sunucuda zamanlanmadıkça yedek alınmıyor.
+2. **Telefon görünürlüğünü hocaya sor**, cevaba göre uygula.
+3. **Worktree'yi sil** — gerçek kişisel veri kopyaları diskte duruyor.
+4. **Şifre sıfırlama** (yönetici eliyle).
+5. **Bölüm listesini netleştir** ve `department_id` göçünü planla.
+6. **Testleri genişlet** — dosya yükleme (transkript/fotoğraf) henüz kapsanmıyor.
 
 ---
 

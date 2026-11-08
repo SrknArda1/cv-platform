@@ -143,6 +143,18 @@
     <div class="doc-head-text">
       <h1 class="doc-name">Özgeçmişim</h1>
       <p class="doc-dept">Bölümleri doldurdukça profil doluluğunuz artar.</p>
+      {# Doluluk, yazdıkça tarayıcıda yeniden hesaplanır (main.js:
+         initLiveCompletion). Kural models.py profile_completion() ile aynı. #}
+      <div class="live-meter" data-live-completion
+           data-has-transcript="{{ '1' if student.transcript_filename else '0' }}">
+        <span class="meter is-mid">
+          <span class="meter-track"><span class="meter-fill"
+                style="width:{{ student.profile_completion() }}%"></span></span>
+        </span>
+        <span class="live-meter-text" aria-live="polite">
+          Profil doluluğu: <strong data-live-value>%{{ student.profile_completion() }}</strong>
+        </span>
+      </div>
     </div>
   </header>
 
@@ -179,7 +191,7 @@
         </div>
         <div class="field col-6">
           <label class="label" for="photo">Profil fotoğrafı</label>
-          <input type="file" id="photo" name="photo" accept=".jpg,.jpeg,.png,.webp">
+          <input type="file" id="photo" name="photo" data-max-mb="10" accept=".jpg,.jpeg,.png,.webp">
           {% if student.photo_filename %}
             <span class="file-note">Yüklü — yeni seçerseniz üzerine yazılır.</span>
             {# Yüklenen dosyayı geri alabilmek için; işaretlenip kaydedilince
@@ -195,7 +207,7 @@
 
         <div class="field col-12">
           <label class="label" for="transcript">Transkript</label>
-          <input type="file" id="transcript" name="transcript" accept=".pdf,.jpg,.jpeg,.png">
+          <input type="file" id="transcript" name="transcript" data-max-mb="10" accept=".pdf,.jpg,.jpeg,.png">
           {% if student.transcript_filename %}
             <span class="file-note">Yüklü — yeni seçerseniz üzerine yazılır.</span>
             <label class="check">
