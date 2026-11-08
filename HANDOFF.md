@@ -137,7 +137,7 @@ Tahminle hareket etmeyin.
 
 ## Testler
 
-`pytest` ile **121 test** (`tests/`). Gerçek veritabanına dokunmazlar;
+`pytest` ile **128 test** (`tests/`). Gerçek veritabanına dokunmazlar;
 `DATA_DIR` geçici klasöre yönlendirilir.
 
 ```bash

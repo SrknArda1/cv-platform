@@ -129,10 +129,16 @@ kendiliğinden düzelir; JavaScript saymaz.
   kurum o kodu kendi oturumunda çalıştırırdı. Şemasız yazılan adreslere
   (`credly.com/...`) reddetmek yerine `https://` eklenir
 - Durum değiştiren her işlem POST ve **CSRF token** ile korunur
-- **Giriş denemesi sınırı:** yönetici 5/dakika, öğrenci ve kurum 10/dakika.
+- **Giriş denemesi sınırı:** yönetici 15/dakika ve 60/saat, öğrenci ve kurum
+  60/dakika ve 400/saat.
   Sınırsız deneme olsaydı bir betik dakikada binlerce şifre deneyebilirdi —
   adresin tahmin edilebilir olması (`/admin/giris`) bu yüzden tek başına
   risk değil, asıl engel budur
+- **Sayfa isteği sınırı:** kendi sınırı olmayan her sayfada IP başına
+  120/dakika; aşımda 429. F5'e basılı tutmak ya da basit bir betik sayfaları
+  sınırsız işletemez. Statik dosyalar sayılmaz, fotoğrafların ayrı sınırı var
+  (600/dakika), API'nin kendi sınırı geçerli. **Tek IP'yi durdurur**; binlerce
+  farklı IP'den gelen saldırı (DDoS) için Cloudflare gibi bir katman gerekir
 - Oturum çerezi: `HttpOnly`, `SameSite=Lax`, dışa açık çalıştırmada `Secure`;
   oturum ömrü 31 gün değil **8 saat**
 - Başarısız giriş denemeleri e-posta ve IP ile loglanır (sunucu çıktısında)
@@ -241,7 +247,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-**121 test**, beş dosyada:
+**128 test**, altı dosyada:
 
 | Dosya | Ne denetler |
 |---|---|
@@ -250,6 +256,7 @@ pytest
 | `tests/test_sertifika.py` | 24 — adres şema denetimi, sertifika alanları, PDF çıktısı |
 | `tests/test_goc.py` | 3 — boş veritabanından `db upgrade`, mevcut veritabanına dokunulmaması |
 | `tests/test_performans.py` | 7 — N+1 koruması (sorgu sayısı öğrenci sayısıyla artmaz), API'nin salt okunur olması, CLI çıktısı |
+| `tests/test_hiz_siniri.py` | 7 — sayfa, giriş, fotoğraf ve API sınırları, statik dosyaların sayılmaması, IP ayrımı |
 
 Testler `DATA_DIR`'i geçici bir klasöre yönlendirir; **gerçek veritabanına
 dokunulmaz**. Ortam değişkenleri `tests/conftest.py` içinde, `app` içe

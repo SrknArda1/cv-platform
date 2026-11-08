@@ -148,9 +148,15 @@ csrf = CSRFProtect(app)
 # calistirmada (PythonAnywhere ucretsiz katman, gunicorn --workers 2) yeterli.
 # Cok sunuculu bir kuruluma gecilirse Redis'e alinmalidir, yoksa her sunucu
 # kendi sayacini tutar ve sinir etkisini kaybeder.
+#
+# default_limits: kendi siniri olmayan her sayfa icin IP basina taban. F5'e
+# basili tutmak ya da basit bir betik sayfalari sinirsizca isletemesin diye.
+# Tek bir IP'yi durdurur; binlerce farkli IP'den gelen saldiriyi (DDoS) degil.
+# Okuldaki herkes tek IP'den gorunebilir, bu yuzden sayi fazla dusuk tutulmadi.
 limiter = Limiter(
     get_remote_address,
     app=app,
+    default_limits=["120 per minute"],
     storage_uri="memory://",
     strategy="fixed-window",
 )
@@ -334,9 +340,9 @@ def error_csrf(e):
 @app.errorhandler(429)
 def error_too_many_requests(e):
     return _error_page(
-        429, "Çok fazla deneme",
-        "Arka arkaya çok sayıda giriş denemesi yapıldı. Güvenlik gereği bir "
-        "süre beklemeniz gerekiyor; birkaç dakika sonra tekrar deneyin.",
+        429, "Çok fazla istek",
+        "Kısa sürede çok sayıda istek gönderildi. Güvenlik gereği bir süre "
+        "beklemeniz gerekiyor; birkaç dakika sonra tekrar deneyin.",
     )
 
 
@@ -406,6 +412,9 @@ def index():
 
 @app.route("/uploads/photos/<filename>")
 @login_required
+# Aday havuzunda sayfa basina 25 fotograf var; taban sinira dahil olsaydi kurum
+# bes sayfa gezince engellenirdi. Ayri ve genis sinir: sayfa basina 25 x 24 sayfa.
+@limiter.limit("600 per minute")
 def uploaded_photo(filename):
     """Profil fotografi.
 
