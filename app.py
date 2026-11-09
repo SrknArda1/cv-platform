@@ -589,6 +589,61 @@ def student_cv_form():
     return render_template("student_cv_form.html", student=current_user, departments=departments)
 
 
+@app.route("/download_template/<int:template_id>")
+@login_required
+@role_required("student")
+def download_template(template_id):
+    if not 1 <= template_id <= 6:
+        abort(404)
+
+    student = User.query.filter_by(id=current_user.id, role="student").first_or_404()
+    photo_filename = student.photo_filename
+    if photo_filename:
+        photo_path = os.path.join(PHOTO_FOLDER, photo_filename)
+        if not (
+            photo_filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
+            and os.path.exists(photo_path)
+        ):
+            photo_filename = None
+
+    html_content = render_template(
+        f"cv_template_{template_id}.html",
+        student=student,
+        foto=photo_filename,
+    )
+    pdf_buffer = BytesIO()
+
+    def link_callback(uri, rel):
+        if uri.startswith("uploads/photos/"):
+            return os.path.join(PHOTO_FOLDER, os.path.basename(uri))
+        if uri.startswith("static/"):
+            return os.path.join(BASE_DIR, uri)
+        return os.path.join(BASE_DIR, "static", uri)
+
+    pdf_status = pisa.CreatePDF(
+        src=html_content,
+        dest=pdf_buffer,
+        encoding="utf-8",
+        link_callback=link_callback,
+    )
+    if pdf_status.err:
+        flash("PDF oluşturulurken bir hata meydana geldi.", "error")
+        return redirect(url_for("student_cv_form"))
+
+    raw_name = student.full_name or "Ogrenci"
+    clean_name = unicodedata.normalize("NFKD", raw_name).encode("ASCII", "ignore").decode("utf-8")
+    clean_name = re.sub(r"[^a-zA-Z0-9_-]", "_", clean_name.strip()) or "Ogrenci"
+    ascii_filename = f"{clean_name}_cv.pdf"
+    utf8_filename = quote(f"{raw_name}_cv.pdf")
+
+    response = make_response(pdf_buffer.getvalue())
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = (
+        f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{utf8_filename}"
+    )
+    return response
+
+
 @app.route("/student/preview")
 @login_required
 @role_required("student")

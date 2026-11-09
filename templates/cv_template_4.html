@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: a4 portrait; margin: 19mm 20mm; }
+  body { font-family: 'DejaVuSerif'; font-size: 9pt; line-height: 1.4; color: #202020; }
+  .masthead { width: 100%; padding-bottom: 12px; border-bottom: 0.7px solid #333; text-align: center; }
+  .portrait { margin-bottom: 6px; }
+  .portrait img { width: 58px; height: 72px; }
+  .name { margin: 0; font-family: 'DejaVuSerif'; font-size: 22pt; font-weight: normal; }
+  .department { margin-top: 4px; font-style: italic; }
+  .contact { margin-top: 7px; font-size: 8pt; }
+  .summary { margin-top: 12px; text-align: justify; }
+  .section { margin-top: 15px; }
+  .section-title { margin: 0 0 7px; padding-bottom: 4px; border-bottom: 0.6px solid #555; font-family: 'DejaVuSerif'; font-size: 10pt; font-weight: bold; }
+  .record { width: 100%; margin-bottom: 6px; }
+  .date { width: 88px; vertical-align: top; font-style: italic; font-size: 8pt; }
+  .details { vertical-align: top; text-align: justify; }
+  .record-title { font-weight: bold; }
+  .description { margin: 3px 0 0; text-align: justify; }
+  .citation { margin: 0 0 6px; padding-left: 18px; text-align: justify; }
+  .skills { text-align: justify; }
+</style>
+</head>
+<body>
+  <table class="masthead"><tr><td>
+    {% if foto %}<div class="portrait"><img src="uploads/photos/{{ foto }}" alt=""></div>{% endif %}
+    <h1 class="name">{{ student.full_name or student.email }}</h1>
+    {% if student.department %}<div class="department">{{ student.department }}</div>{% endif %}
+    <div class="contact">{{ student.email }}{% if student.phone %} &nbsp;|&nbsp; {{ student.phone }}{% endif %}</div>
+  </td></tr></table>
+  {% if student.summary %}<div class="summary"><strong>Özet.</strong> {{ student.summary }}</div>{% endif %}
+  <section class="section"><h2 class="section-title">Eğitim Geçmişi</h2>
+    {% for edu in student.educations %}<table class="record"><tr><td class="date">{{ edu.start_year }}{% if edu.end_year %}–{{ edu.end_year }}{% endif %}</td><td class="details">
+      <span class="record-title">{{ edu.school }}</span>{% if edu.department %}, {{ edu.department }}{% endif %}{% if edu.degree_type %} ({{ edu.degree_type }}){% endif %}{% if edu.gpa %}. Not ortalaması: {{ edu.gpa }}.{% endif %}
+    </td></tr></table>{% else %}<div>Eğitim bilgisi eklenmemiş.</div>{% endfor %}
+  </section>
+  <section class="section"><h2 class="section-title">Mesleki Deneyim</h2>
+    {% for exp in student.experiences %}<table class="record"><tr><td class="date">{{ exp.start_date }}{% if exp.end_date %}–{{ exp.end_date }}{% endif %}</td><td class="details">
+      <span class="record-title">{{ exp.position or 'Pozisyon belirtilmemiş' }}</span>{% if exp.company %}, {{ exp.company }}{% endif %}.
+      {% if exp.description %}<p class="description">{{ exp.description }}</p>{% endif %}
+    </td></tr></table>{% else %}<div>Deneyim bilgisi eklenmemiş.</div>{% endfor %}
+  </section>
+  <section class="section"><h2 class="section-title">Projeler ve Araştırma</h2>
+    {% for proj in student.projects %}<p class="citation"><strong>{{ proj.title }}.</strong>{% if proj.description %} {{ proj.description }}{% endif %}{% if proj.tech_stack %} Teknolojiler: {{ proj.tech_stack }}.{% endif %}{% if proj.link %} Erişim: {{ proj.link }}.{% endif %}</p>
+    {% else %}<div>Proje bilgisi eklenmemiş.</div>{% endfor %}
+  </section>
+  <section class="section"><h2 class="section-title">Sertifikalar</h2>
+    {% for cert in student.certificates %}<p class="citation"><strong>{{ cert.name }}.</strong>{% if cert.institution %} {{ cert.institution }}{% endif %}{% if cert.date %}, {{ cert.date }}{% endif %}{% if cert.credential_id %}. Belge no: {{ cert.credential_id }}{% endif %}{% if cert.credential_url %}. {{ cert.credential_url }}{% endif %}</p>
+    {% else %}<div>Sertifika bilgisi eklenmemiş.</div>{% endfor %}
+  </section>
+  {% if student.skills %}<section class="section"><h2 class="section-title">Araştırma ve Teknik Yetkinlikler</h2><p class="skills">{{ student.skills }}</p></section>{% endif %}
+</body>
+</html>

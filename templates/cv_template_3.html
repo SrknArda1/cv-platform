@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: a4 portrait; margin: 17mm 16mm; }
+  body { font-family: 'DejaVuSans'; font-size: 9pt; line-height: 1.45; color: #263238; }
+  .header { width: 100%; padding-bottom: 13px; border-bottom: 3px solid #2c3e50; }
+  .header-photo { width: 82px; text-align: right; vertical-align: top; }
+  .header-photo img { width: 68px; height: 86px; }
+  .name { margin: 0; color: #1d2b36; font-size: 23pt; }
+  .department { margin-top: 5px; color: #435563; font-size: 11pt; }
+  .contact { margin-top: 8px; color: #52616b; font-size: 8pt; }
+  .section { margin-top: 19px; }
+  .section-title { margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px solid #2c3e50; color: #2c3e50; font-size: 10pt; }
+  .record { width: 100%; margin-bottom: 10px; padding: 7px 0; border-bottom: 0.6px solid #d7dfe4; }
+  .date { width: 96px; vertical-align: top; color: #53636e; font-size: 8pt; }
+  .details { vertical-align: top; }
+  .record-title { color: #17232c; font-size: 9.5pt; }
+  .meta { margin-top: 3px; color: #53636e; font-size: 8pt; }
+  .description { margin: 5px 0 0; }
+  .skills-table { width: 100%; }
+  .skill-label { width: 100px; padding: 3px 0; color: #40515d; font-weight: bold; vertical-align: top; }
+  .skill-data { padding: 3px 0; vertical-align: top; }
+</style>
+</head>
+<body>
+  <table class="header"><tr><td>
+    <h1 class="name">{{ student.full_name or student.email }}</h1>
+    {% if student.department %}<div class="department">{{ student.department }}</div>{% endif %}
+    <div class="contact">{{ student.email }}{% if student.phone %} | {{ student.phone }}{% endif %}</div>
+  </td>{% if foto %}<td class="header-photo"><img src="uploads/photos/{{ foto }}" alt=""></td>{% endif %}</tr></table>
+  {% if student.summary %}<section class="section"><h2 class="section-title">PROFESYONEL ÖZET</h2><div>{{ student.summary }}</div></section>{% endif %}
+  <section class="section"><h2 class="section-title">EĞİTİM</h2>
+    {% for edu in student.educations %}<table class="record"><tr><td class="date">{{ edu.start_year }}{% if edu.end_year %}–{{ edu.end_year }}{% endif %}</td><td class="details">
+      <div class="record-title"><strong>{{ edu.school }}</strong></div>{% if edu.department %}<div class="meta">{{ edu.department }}</div>{% endif %}
+      {% if edu.degree_type %}<div class="meta">{{ edu.degree_type }}</div>{% endif %}{% if edu.gpa %}<div class="meta">Ortalama {{ edu.gpa }}</div>{% endif %}
+    </td></tr></table>{% else %}<div class="meta">Eğitim bilgisi eklenmemiş.</div>{% endfor %}
+  </section>
+  <section class="section"><h2 class="section-title">DENEYİM</h2>
+    {% for exp in student.experiences %}<table class="record"><tr><td class="date">{{ exp.start_date }}{% if exp.end_date %}–{{ exp.end_date }}{% endif %}</td><td class="details">
+      <div class="record-title"><strong>{{ exp.position or 'Pozisyon belirtilmemiş' }}</strong>{% if exp.company %} · {{ exp.company }}{% endif %}</div>
+      {% if exp.description %}<p class="description">{{ exp.description }}</p>{% endif %}
+    </td></tr></table>{% else %}<div class="meta">Deneyim eklenmemiş.</div>{% endfor %}
+  </section>
+  <section class="section"><h2 class="section-title">PROJELER</h2>
+    {% for proj in student.projects %}<table class="record"><tr><td class="details">
+      <div class="record-title"><strong>{{ proj.title }}</strong></div>{% if proj.description %}<div class="description">{{ proj.description }}</div>{% endif %}
+      {% if proj.tech_stack %}<div class="meta">Teknolojiler: {{ proj.tech_stack }}</div>{% endif %}{% if proj.link %}<div class="meta">{{ proj.link }}</div>{% endif %}
+    </td></tr></table>{% else %}<div class="meta">Proje eklenmemiş.</div>{% endfor %}
+  </section>
+  <section class="section"><h2 class="section-title">SERTİFİKALAR</h2>
+    {% for cert in student.certificates %}<table class="record"><tr><td class="date">{{ cert.date }}</td><td class="details">
+      <div class="record-title"><strong>{{ cert.name }}</strong>{% if cert.institution %} · {{ cert.institution }}{% endif %}</div>
+      {% if cert.credential_id %}<div class="meta">Belge no: {{ cert.credential_id }}</div>{% endif %}{% if cert.credential_url %}<div class="meta">{{ cert.credential_url }}</div>{% endif %}
+    </td></tr></table>{% else %}<div class="meta">Sertifika eklenmemiş.</div>{% endfor %}
+  </section>
+  {% if student.skills %}<section class="section"><h2 class="section-title">YETKİNLİKLER</h2><table class="skills-table"><tr><td class="skill-label">Teknik</td><td class="skill-data">{{ student.skills }}</td></tr></table></section>{% endif %}
+</body>
+</html>

@@ -179,3 +179,23 @@ def test_pdf_uzun_adresi_kesmeden_yaziyor(istemci, veri, uygulama):
     pypdf = pytest.importorskip("pypdf")
     metin = pypdf.PdfReader(BytesIO(ham)).pages[0].extract_text() or ""
     assert "public_url" in "".join(metin.split())
+
+
+@pytest.mark.parametrize("template_id", range(1, 7))
+def test_cv_sablonlari_pdf_olarak_indiriliyor(istemci, veri, template_id):
+    oturum_ac(istemci, veri["dolu"])
+
+    cevap = istemci.get(f"/download_template/{template_id}")
+
+    assert cevap.status_code == 200
+    assert cevap.data.startswith(b"%PDF")
+    assert cevap.mimetype == "application/pdf"
+    assert "attachment;" in cevap.headers["Content-Disposition"]
+    assert "Ayse_Yilmaz_Demirkan_cv.pdf" in cevap.headers["Content-Disposition"]
+
+
+@pytest.mark.parametrize("template_id", [0, 7])
+def test_gecersiz_cv_sablon_idsi_bulunamadi_doner(istemci, veri, template_id):
+    oturum_ac(istemci, veri["dolu"])
+
+    assert istemci.get(f"/download_template/{template_id}").status_code == 404

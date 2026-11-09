@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: a4 portrait; margin: 0; }
+  body { margin: 0; font-family: 'DejaVuSans'; font-size: 8pt; line-height: 1.45; color: #263445; }
+  .layout { width: 100%; }
+  .sidebar { width: 30%; padding: 30px 17px; vertical-align: top; color: #f8fafc; background-color: #1c2b3a; }
+  .main { width: 70%; padding: 30px 25px; vertical-align: top; background-color: #fff; }
+  .side-photo { margin-bottom: 16px; }
+  .side-photo img { width: 74px; height: 92px; }
+  .side-name { margin: 0; color: #fff; font-size: 18pt; }
+  .side-department { margin-top: 7px; color: #cbd5df; }
+  .side-rule { margin: 23px 0 8px; padding-bottom: 6px; border-bottom: 1px solid #536576; color: #b6c8d8; font-size: 7.5pt; }
+  .side-contact { margin-bottom: 6px; color: #f1f5f9; word-wrap: break-word; }
+  .side-skill { margin: 5px 0; color: #f1f5f9; }
+  .main-section { margin-bottom: 21px; }
+  .main-title { margin: 0 0 11px; padding-bottom: 6px; border-bottom: 1px solid #cbd5df; color: #1c4a68; font-size: 9.5pt; }
+  .entry { width: 100%; margin-bottom: 12px; }
+  .date { width: 65px; vertical-align: top; color: #6b7b89; font-size: 7.5pt; }
+  .details { vertical-align: top; }
+  .entry-title { color: #172635; font-size: 9pt; }
+  .meta { margin-top: 3px; color: #647585; font-size: 7.5pt; }
+  .description { margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<table class="layout" cellpadding="0" cellspacing="0"><tr>
+  <td class="sidebar">
+    {% if foto %}<div class="side-photo"><img src="uploads/photos/{{ foto }}" alt=""></div>{% endif %}
+    <h1 class="side-name">{{ student.full_name or student.email }}</h1>
+    {% if student.department %}<div class="side-department">{{ student.department }}</div>{% endif %}
+    <h2 class="side-rule">İLETİŞİM</h2>
+    <div class="side-contact">{{ student.email }}</div>
+    {% if student.phone %}<div class="side-contact">{{ student.phone }}</div>{% endif %}
+    {% if student.skills %}<h2 class="side-rule">YETKİNLİKLER</h2>
+      {% for skill in student.skills.split(',') if skill.strip() %}<div class="side-skill">• {{ skill.strip() }}</div>{% endfor %}
+    {% endif %}
+  </td>
+  <td class="main">
+    {% if student.summary %}<section class="main-section"><h2 class="main-title">PROFİL</h2><div>{{ student.summary }}</div></section>{% endif %}
+    <section class="main-section"><h2 class="main-title">EĞİTİM</h2>
+      {% for edu in student.educations %}<table class="entry"><tr><td class="date">{{ edu.start_year }}{% if edu.end_year %}–{{ edu.end_year }}{% endif %}</td><td class="details">
+        <div class="entry-title">{{ edu.school }}</div>{% if edu.department %}<div class="meta">{{ edu.department }}</div>{% endif %}
+        {% if edu.degree_type %}<div class="meta">{{ edu.degree_type }}</div>{% endif %}{% if edu.gpa %}<div class="meta">Ortalama {{ edu.gpa }}</div>{% endif %}
+      </td></tr></table>{% else %}<div class="meta">Eğitim bilgisi eklenmemiş.</div>{% endfor %}
+    </section>
+    <section class="main-section"><h2 class="main-title">DENEYİM</h2>
+      {% for exp in student.experiences %}<div class="entry"><div class="entry-title">{{ exp.position or 'Pozisyon belirtilmemiş' }}{% if exp.company %} · {{ exp.company }}{% endif %}</div>
+        <div class="meta">{{ exp.start_date }}{% if exp.end_date %} – {{ exp.end_date }}{% endif %}</div>{% if exp.description %}<p class="description">{{ exp.description }}</p>{% endif %}
+      </div>{% else %}<div class="meta">Deneyim eklenmemiş.</div>{% endfor %}
+    </section>
+    <section class="main-section"><h2 class="main-title">PROJELER</h2>
+      {% for proj in student.projects %}<div class="entry"><div class="entry-title">{{ proj.title }}</div>
+        {% if proj.description %}<p class="description">{{ proj.description }}</p>{% endif %}{% if proj.tech_stack %}<div class="meta">Teknolojiler: {{ proj.tech_stack }}</div>{% endif %}
+        {% if proj.link %}<div class="meta">{{ proj.link }}</div>{% endif %}
+      </div>{% else %}<div class="meta">Proje eklenmemiş.</div>{% endfor %}
+    </section>
+    <section class="main-section"><h2 class="main-title">SERTİFİKALAR</h2>
+      {% for cert in student.certificates %}<div class="entry"><strong>{{ cert.name }}</strong>{% if cert.institution %} · {{ cert.institution }}{% endif %}{% if cert.date %} · {{ cert.date }}{% endif %}
+        {% if cert.credential_id %}<div class="meta">Belge no: {{ cert.credential_id }}</div>{% endif %}{% if cert.credential_url %}<div class="meta">{{ cert.credential_url }}</div>{% endif %}
+      </div>{% else %}<div class="meta">Sertifika eklenmemiş.</div>{% endfor %}
+    </section>
+  </td>
+</tr></table>
+</body>
+</html>
