@@ -111,4 +111,26 @@
     </div>
   {% endif %}
 </section>
+
+{# Veri sayfa yüklendikten sonra tarayıcıda fetch ile /api/v1/yetkinlikler'den
+   çekilir; ABC sınıfları ve kümülatif yüzde admin_charts.js'te hesaplanır. #}
+<section class="group" id="abc-analizi"
+         data-kaynak="{{ url_for('api.yetkinlikler') }}">
+  <h2 class="group-label">Yetkinlik dağılımı — ABC (Pareto) analizi</h2>
+  <div class="chart-box">
+    <canvas id="abc-grafik" role="img"
+            aria-label="Yetkinliklere göre öğrenci sayısı ve kümülatif yüzde"></canvas>
+  </div>
+  <p class="entry-meta abc-anahtar">
+    <span class="abc-renk abc-a"></span> A: bahsedilmelerin ilk %80'i
+    <span class="abc-renk abc-b"></span> B: %80–95
+    <span class="abc-renk abc-c"></span> C: kalan %5
+  </p>
+  <p class="overview-note" id="abc-ozet" aria-live="polite">Grafik yükleniyor…</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='admin_charts.js') }}"></script>
 {% endblock %}

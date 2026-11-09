@@ -3,3 +3,5 @@
 -r requirements.txt
 pytest==9.2.0
 pypdf==6.19.0
+# araclar/yetkinlik_raporu.py (rapor araci; sunucuda calismaz)
+pandas==3.1.1

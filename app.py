@@ -20,6 +20,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 
 import logging
 
+import click
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
@@ -27,7 +28,7 @@ from flask_limiter.util import get_remote_address
 
 from models import (db, User, Education, Experience, Certificate, Project,
                     Department, Message)
-from api import api as api_blueprint, hata_yaniti as api_hata_yaniti
+from api import api as api_blueprint, hata_yaniti as api_hata_yaniti, ogrenci_sorgusu
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -79,7 +80,7 @@ try:
     DEFAULT_FONT["dejavuserif"] = "DejaVuSerif"
     DEFAULT_FONT["dejavusansmono"] = "DejaVuSansMono"
 except Exception as _font_hata:        # font yoksa PDF yine uretilir, varsayilana duser
-    print(f"[uyari] PDF fontu yuklenemedi: {_font_hata}")
+    logging.getLogger("pdf").warning("PDF fontu yuklenemedi: %s", _font_hata)
 
 TRANSCRIPT_FOLDER = os.path.join(DATA_DIR, "uploads", "transcripts")
 PHOTO_FOLDER = os.path.join(DATA_DIR, "uploads", "photos")
@@ -147,9 +148,15 @@ csrf = CSRFProtect(app)
 # calistirmada (PythonAnywhere ucretsiz katman, gunicorn --workers 2) yeterli.
 # Cok sunuculu bir kuruluma gecilirse Redis'e alinmalidir, yoksa her sunucu
 # kendi sayacini tutar ve sinir etkisini kaybeder.
+#
+# default_limits: kendi siniri olmayan her sayfa icin IP basina taban. F5'e
+# basili tutmak ya da basit bir betik sayfalari sinirsizca isletemesin diye.
+# Tek bir IP'yi durdurur; binlerce farkli IP'den gelen saldiriyi (DDoS) degil.
+# Okuldaki herkes tek IP'den gorunebilir, bu yuzden sayi fazla dusuk tutulmadi.
 limiter = Limiter(
     get_remote_address,
     app=app,
+    default_limits=["120 per minute"],
     storage_uri="memory://",
     strategy="fixed-window",
 )
@@ -333,9 +340,9 @@ def error_csrf(e):
 @app.errorhandler(429)
 def error_too_many_requests(e):
     return _error_page(
-        429, "Çok fazla deneme",
-        "Arka arkaya çok sayıda giriş denemesi yapıldı. Güvenlik gereği bir "
-        "süre beklemeniz gerekiyor; birkaç dakika sonra tekrar deneyin.",
+        429, "Çok fazla istek",
+        "Kısa sürede çok sayıda istek gönderildi. Güvenlik gereği bir süre "
+        "beklemeniz gerekiyor; birkaç dakika sonra tekrar deneyin.",
     )
 
 
@@ -405,6 +412,9 @@ def index():
 
 @app.route("/uploads/photos/<filename>")
 @login_required
+# Aday havuzunda sayfa basina 25 fotograf var; taban sinira dahil olsaydi kurum
+# bes sayfa gezince engellenirdi. Ayri ve genis sinir: sayfa basina 25 x 24 sayfa.
+@limiter.limit("600 per minute")
 def uploaded_photo(filename):
     """Profil fotografi.
 
@@ -809,7 +819,9 @@ def company_dashboard():
         sort = "name"
     direction = "desc" if request.args.get("dir") == "desc" else "asc"
 
-    query = User.query.filter_by(role="student")
+    # Doluluk ve ortalama iliskili tablolardan hesaplanir; ogrenci_sorgusu()
+    # olmadan her ogrenci icin ayri sorgu calisirdi (N+1).
+    query = ogrenci_sorgusu()
     if selected_department:
         query = query.filter_by(department=selected_department)
     if q:
@@ -1231,7 +1243,7 @@ def admin_revoke_company(company_id):
 @role_required("admin")
 def admin_overview():
     """Koordinatorun giris ekrani: platformun tek bakista ozeti."""
-    students = User.query.filter_by(role="student").all()
+    students = ogrenci_sorgusu().all()
     companies = User.query.filter_by(role="company").all()
     departments = Department.query.order_by(Department.name).all()
 
@@ -1273,7 +1285,7 @@ def admin_students():
     q = request.args.get("q", "").strip()
     durum = request.args.get("durum", "")
 
-    query = User.query.filter_by(role="student")
+    query = ogrenci_sorgusu()
     if q:
         like = f"%{q}%"
         query = query.filter(db.or_(User.full_name.ilike(like), User.email.ilike(like)))
@@ -1453,10 +1465,9 @@ app.register_blueprint(api_blueprint)
 # katmanin gunluk CPU butcesi tukenir ve SITE TAMAMEN durur.
 limiter.limit("120 per minute; 2000 per hour")(api_blueprint)
 
-# CSRF korumasi yalnizca durum degistiren metotlar icindir ve cerez tabanli
-# oturuma dayanir. API salt-okunur ve cerezsiz oldugu icin konu disi; yine de
-# acikca muaf tutuluyor ki ileride POST eklenirse bilincli bir karar olsun.
-csrf.exempt(api_blueprint)
+# API CSRF'ten muaf DEGIL: CSRF yalnizca durum degistiren metotlara uygulanir ve
+# API'de yalnizca GET var, muafiyete gerek yok. Ileride POST eklenirse varsayilan
+# olarak korumali gelir; muafiyet ancak bilincli bir kararla eklenir.
 
 
 def create_app():
@@ -1496,27 +1507,27 @@ def approve_company():
     """Onay bekleyen kurumları listeler ve onaylama imkanı verir."""
     pending = User.query.filter_by(role="company", is_approved=False).all()
     if not pending:
-        print("Onay bekleyen kurum bulunmuyor.")
+        click.echo("Onay bekleyen kurum bulunmuyor.")
         return
 
-    print("\n--- Onay Bekleyen Kurumlar ---")
+    click.echo("\n--- Onay Bekleyen Kurumlar ---")
     for c in pending:
-        print(f"ID: {c.id} | Şirket: {c.company_name} | Yetkili: {c.contact_person} | E-posta: {c.email}")
+        click.echo(f"ID: {c.id} | Şirket: {c.company_name} | Yetkili: {c.contact_person} | E-posta: {c.email}")
     
     comp_id = input("\nOnaylamak istediğiniz Kurum ID'sini girin (Tümünü onaylamak için 'all'): ").strip()
     if comp_id == "all":
         for c in pending:
             c.is_approved = True
         db.session.commit()
-        print("Tüm kurumlar onaylandı.")
+        click.echo("Tüm kurumlar onaylandı.")
     elif comp_id.isdigit():
         target = User.query.get(int(comp_id))
         if target and target.role == "company":
             target.is_approved = True
             db.session.commit()
-            print(f"{target.company_name} başarıyla onaylandı.")
+            click.echo(f"{target.company_name} başarıyla onaylandı.")
         else:
-            print("Geçersiz kurum ID.")
+            click.echo("Geçersiz kurum ID.")
 
 
 @app.cli.command("create-admin")
@@ -1530,21 +1541,21 @@ def create_admin():
 
     email = input("Yonetici e-postasi: ").strip().lower()
     if not email:
-        print("E-posta bos olamaz.")
+        click.echo("E-posta bos olamaz.")
         return
 
     if User.query.filter_by(email=email).first():
-        print(f"'{email}' ile zaten bir hesap var.")
+        click.echo(f"'{email}' ile zaten bir hesap var.")
         return
 
     full_name = input("Ad soyad: ").strip() or "Kampus Koordinatoru"
 
     password = getpass.getpass("Sifre (en az 6 karakter): ")
     if len(password) < 6:
-        print("Sifre en az 6 karakter olmali.")
+        click.echo("Sifre en az 6 karakter olmali.")
         return
     if password != getpass.getpass("Sifre (tekrar): "):
-        print("Sifreler eslesmiyor.")
+        click.echo("Sifreler eslesmiyor.")
         return
 
     db.session.add(User(
@@ -1554,8 +1565,8 @@ def create_admin():
         full_name=full_name,
     ))
     db.session.commit()
-    print(f"Yonetici olusturuldu: {email}")
-    print("Giris: /admin/giris")
+    click.echo(f"Yonetici olusturuldu: {email}")
+    click.echo("Giris: /admin/giris")
 
 
 @app.cli.command("seed-demo")
@@ -1572,7 +1583,7 @@ def seed_demo():
     from datetime import timedelta
 
     if User.query.filter(User.email.like("%@ornek.edu.tr")).first():
-        print("Demo verisi zaten var. Once temizlemek icin: flask --app app clear-demo")
+        click.echo("Demo verisi zaten var. Once temizlemek icin: flask --app app clear-demo")
         return
 
     random.seed(42)   # her calistirmada ayni sonuc
@@ -1689,11 +1700,11 @@ def seed_demo():
         ))
 
     db.session.commit()
-    print(f"{olusan} uydurma ogrenci olusturuldu.")
-    print("  Kurum (onayli) : demo@ornek.com / demo1234")
-    print("  Kurum (bekleyen): bekleyen@ornek.com")
-    print("  Ogrenci         : ogrenci01@ornek.edu.tr / demo1234")
-    print("\nYonetici hesabi ayrica olusturulmali: flask --app app create-admin")
+    click.echo(f"{olusan} uydurma ogrenci olusturuldu.")
+    click.echo("  Kurum (onayli) : demo@ornek.com / demo1234")
+    click.echo("  Kurum (bekleyen): bekleyen@ornek.com")
+    click.echo("  Ogrenci         : ogrenci01@ornek.edu.tr / demo1234")
+    click.echo("\nYonetici hesabi ayrica olusturulmali: flask --app app create-admin")
 
 
 @app.cli.command("clear-demo")
@@ -1705,4 +1716,140 @@ def clear_demo():
     for u in demo:
         db.session.delete(u)      # cascade ile CV kayitlari da gider
     db.session.commit()
-    print(f"{len(demo)} demo kaydi silindi.")
+    click.echo(f"{len(demo)} demo kaydi silindi.")
+
+
+# ---------------------------------------------------------------------------
+# Ana veri gocu: bolum listesini CSV'den ice aktarma
+# ---------------------------------------------------------------------------
+
+def bolum_anahtari(ad):
+    """Mukerrer kontrolu icin karsilastirma anahtari.
+
+    "Kurumsal  Bilişim", "kurumsal bilişim" ve "KURUMSAL BİLİŞİM" ayni bolumdur.
+    Turkce I/İ casefold'da dogru donmedigi icin once elle cevrilir.
+    """
+    ad = unicodedata.normalize("NFC", ad or "")
+    ad = ad.replace("I", "ı").replace("İ", "i")
+    return re.sub(r"\s+", " ", ad).strip().casefold()
+
+
+@app.cli.command("bolum-ice-aktar")
+@click.argument("dosya", type=click.Path(exists=True, dir_okay=False))
+@click.option("--kuru", is_flag=True,
+              help="Hicbir sey yazmadan yalnizca ne olacagini raporla.")
+def bolum_ice_aktar(dosya, kuru):
+    """Bolum listesini CSV'den aktarir (ana veri gocu).
+
+    Dosyada 'name' (veya 'bolum') kolonu olmali; ';' ve ',' ayiricilari
+    otomatik taninir. Bos satirlar, dosya icindeki tekrarlar ve veritabaninda
+    zaten olan bolumler (buyuk/kucuk harf ve bosluk farki dahil) atlanir.
+    Ya hepsi yazilir ya hicbiri: tek commit.
+    """
+    import csv
+
+    with open(dosya, encoding="utf-8-sig", newline="") as f:
+        ornek = f.read(4096)
+        f.seek(0)
+        try:
+            lehce = csv.Sniffer().sniff(ornek, delimiters=";,")
+        except csv.Error:
+            lehce = csv.excel  # Tek kolonlu dosyada ayirici bulunamaz
+        okuyucu = csv.DictReader(f, dialect=lehce)
+        kolonlar = {(k or "").strip().lower(): k for k in (okuyucu.fieldnames or [])}
+        kolon = kolonlar.get("name") or kolonlar.get("bolum") or kolonlar.get("bölüm")
+        if not kolon:
+            raise click.ClickException(
+                f"'name' veya 'bolum' kolonu bulunamadi. Kolonlar: {okuyucu.fieldnames}")
+        satirlar = [(satir.get(kolon) or "") for satir in okuyucu]
+
+    mevcut = {bolum_anahtari(d.name): d.name for d in Department.query.all()}
+    eklenecek, zaten_var, dosyada_tekrar, bos = [], [], [], 0
+    gorulen = {}
+
+    for ham in satirlar:
+        ad = re.sub(r"\s+", " ", ham).strip()
+        if not ad:
+            bos += 1
+            continue
+        anahtar = bolum_anahtari(ad)
+        if anahtar in mevcut:
+            zaten_var.append(f"{ad} (kayitli: {mevcut[anahtar]})")
+        elif anahtar in gorulen:
+            dosyada_tekrar.append(f"{ad} (ilk hali: {gorulen[anahtar]})")
+        else:
+            gorulen[anahtar] = ad
+            eklenecek.append(ad)
+
+    # Department.name String(120); uzun ad tum aktarimi durdurur, kirpilmaz
+    if any(len(ad) > 120 for ad in eklenecek):
+        raise click.ClickException("120 karakteri asan bolum adi var; hicbir sey yazilmadi.")
+
+    click.echo(f"Okunan satir       : {len(satirlar)}")
+    click.echo(f"Eklenecek          : {len(eklenecek)}")
+    for ad in eklenecek:
+        click.echo(f"  + {ad}")
+    click.echo(f"Zaten kayitli      : {len(zaten_var)}")
+    for ad in zaten_var:
+        click.echo(f"  = {ad}")
+    click.echo(f"Dosyada tekrar     : {len(dosyada_tekrar)}")
+    for ad in dosyada_tekrar:
+        click.echo(f"  x {ad}")
+    click.echo(f"Bos satir          : {bos}")
+
+    if kuru:
+        click.echo("Kuru calistirma: veritabanina hicbir sey yazilmadi.")
+        return
+
+    db.session.add_all(Department(name=ad) for ad in eklenecek)
+    db.session.commit()
+    click.echo(f"{len(eklenecek)} bolum eklendi.")
+
+
+# ---------------------------------------------------------------------------
+# Zamanlanmis gorev: veritabani yedegi
+# ---------------------------------------------------------------------------
+
+@app.cli.command("yedekle")
+@click.option("--sakla", default=7, show_default=True, type=click.IntRange(min=1),
+              help="Klasorde tutulacak en yeni yedek sayisi; eskiler silinir.")
+def yedekle(sakla):
+    """Veritabaninin tutarli bir kopyasini DATA_DIR/yedekler altina alir.
+
+    PythonAnywhere'de "Tasks" sekmesinden gunluk zamanlanmis gorev olarak
+    calistirilmak icin yazildi. Dosyayi kopyalamak yerine SQLite'in yedekleme
+    API'si kullanilir: yazma o sirada devam etse bile yarim kopya olusmaz.
+    Yuklenen dosyalar (uploads) bu yedege dahil degildir.
+    """
+    import sqlite3
+
+    kaynak_yolu = db.engine.url.database
+    klasor = os.path.join(DATA_DIR, "yedekler")
+    os.makedirs(klasor, exist_ok=True)
+    hedef_yolu = os.path.join(
+        klasor, f"cv_platform-{datetime.now():%Y%m%d-%H%M%S}.db")
+
+    kaynak = sqlite3.connect(kaynak_yolu)
+    hedef = sqlite3.connect(hedef_yolu)
+    try:
+        with hedef:
+            kaynak.backup(hedef)
+        durum = hedef.execute("PRAGMA integrity_check").fetchone()[0]
+    finally:
+        hedef.close()
+        kaynak.close()
+
+    if durum != "ok":
+        os.remove(hedef_yolu)
+        raise click.ClickException(f"Yedek butunluk denetiminden gecmedi: {durum}")
+
+    yedekler = sorted(f for f in os.listdir(klasor)
+                      if f.startswith("cv_platform-") and f.endswith(".db"))
+    silinen = yedekler[:-sakla]
+    for ad in silinen:
+        os.remove(os.path.join(klasor, ad))
+
+    boyut_kb = os.path.getsize(hedef_yolu) / 1024
+    click.echo(f"Yedek alindi: {hedef_yolu} ({boyut_kb:.0f} KB, butunluk: ok)")
+    if silinen:
+        click.echo(f"{len(silinen)} eski yedek silindi; {sakla} yedek tutuluyor.")

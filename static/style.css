@@ -681,6 +681,8 @@ body.app {
 .input-lg, .select-lg { height: 44px; font-size: var(--t-md); }
 
 .field-hint { font-size: var(--t-xs); color: var(--ink-3); }
+/* Anlık uyarı (main.js uyariGoster) */
+.field-warn { display: block; font-size: var(--t-xs); color: var(--danger); margin-top: var(--s-1); }
 
 .form-stack { display: flex; flex-direction: column; gap: var(--s-3); }
 
@@ -1044,7 +1046,8 @@ a.state-yes:hover { text-decoration: underline; text-underline-offset: 2px; }
   overflow: hidden;
   flex-shrink: 0;
 }
-.meter-fill { height: 100%; background: var(--ink-3); border-radius: 2px; }
+/* display:block şart: span satır içi kalırsa width uygulanmaz, çubuk hep boş görünür */
+.meter-fill { display: block; height: 100%; background: var(--ink-3); border-radius: 2px; }
 .meter-val {
   font-family: var(--mono);
   font-size: var(--t-xs);
@@ -1991,3 +1994,19 @@ a.state-yes:hover { text-decoration: underline; text-underline-offset: 2px; }
     animation-duration: 0.01ms !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Grafik kutusu (yönetici paneli ABC analizi) ve canlı profil doluluğu
+   -------------------------------------------------------------------------- */
+
+.chart-box { position: relative; height: 320px; }
+@media (max-width: 760px) { .chart-box { height: 260px; } }
+.abc-anahtar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin-top: var(--s-3); }
+.abc-renk { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-left: var(--s-2); }
+.abc-a { background: var(--accent); }
+.abc-b { background: var(--warn); }
+.abc-c { background: var(--ink-3); }
+
+.live-meter { display: flex; align-items: center; gap: var(--s-3); margin-top: var(--s-3); }
+.live-meter .meter-track { width: 180px; }
+.live-meter-text { font-size: var(--t-sm); color: var(--ink-2); }

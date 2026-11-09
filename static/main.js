@@ -4,7 +4,188 @@ document.addEventListener("DOMContentLoaded", () => {
   initDynamicRows();
   initUnsavedGuard();
   initConfirmForms();
+  initLiveCompletion();
+  initLiveSearch();
+  initFileSizeGuard();
+  initPasswordMatch();
+  initCvRowWarnings();
 });
+
+/* --------------------------------------------------------------------------
+   İstemci tarafı doğrulama ve anlık uyarılar
+
+   Sunucu doğrulaması (app.py) asıl korumadır; buradakiler kullanıcıyı
+   formu göndermeden ÖNCE uyarır. İki tür var:
+     - Engelleyen (setCustomValidity): sunucunun da reddedeceği durumlar
+       (10 MB'ı aşan dosya, eşleşmeyen şifre). Form gönderilmez.
+     - Yalnızca uyaran: sunucunun kabul ettiği ama büyük olasılıkla yanlış
+       girilmiş değerler (not aralığı, bitiş yılı < başlangıç yılı).
+   -------------------------------------------------------------------------- */
+
+function uyariGoster(alan, mesaj) {
+  let kutu = alan.parentElement.querySelector(".field-warn");
+  if (!mesaj) {
+    if (kutu) kutu.remove();
+    return;
+  }
+  if (!kutu) {
+    kutu = document.createElement("span");
+    kutu.className = "field-warn";
+    kutu.setAttribute("role", "alert");
+    alan.insertAdjacentElement("afterend", kutu);
+  }
+  kutu.textContent = mesaj;
+}
+
+function initFileSizeGuard() {
+  document.querySelectorAll('input[type="file"][data-max-mb]').forEach((alan) => {
+    const sinirMb = Number(alan.dataset.maxMb);
+    alan.addEventListener("change", () => {
+      const dosya = alan.files[0];
+      const buyuk = dosya && dosya.size > sinirMb * 1024 * 1024;
+      const mesaj = buyuk
+        ? `Dosya ${(dosya.size / 1048576).toFixed(1)} MB; en fazla ${sinirMb} MB yüklenebilir.`
+        : "";
+      alan.setCustomValidity(mesaj);
+      uyariGoster(alan, mesaj);
+    });
+  });
+}
+
+function initPasswordMatch() {
+  const tekrar = document.querySelector('input[name="password2"]');
+  const sifre = tekrar && tekrar.form.querySelector('input[name="password"]');
+  if (!sifre) return;
+
+  function denetle() {
+    const mesaj = tekrar.value && tekrar.value !== sifre.value ? "Şifreler eşleşmiyor." : "";
+    tekrar.setCustomValidity(mesaj);
+    uyariGoster(tekrar, mesaj);
+  }
+  sifre.addEventListener("input", denetle);
+  tekrar.addEventListener("input", denetle);
+}
+
+function notUyarisi(deger) {
+  if (!deger.trim()) return "";
+  const sayi = Number(deger.replace(",", "."));
+  if (Number.isNaN(sayi)) return "Not sayı olmalı (örn. 3,45).";
+  if (sayi < 0 || sayi > 100) return "Not 0–4 (veya 100'lük sistemde 0–100) aralığında olmalı.";
+  return "";
+}
+
+function initCvRowWarnings() {
+  const form = document.querySelector("[data-guard-unsaved]");
+  if (!form) return;
+
+  form.addEventListener("input", (e) => {
+    const alan = e.target;
+    if (alan.name === "edu_gpa[]") {
+      uyariGoster(alan, notUyarisi(alan.value));
+    } else if (alan.name === "edu_start_year[]" || alan.name === "edu_end_year[]") {
+      const satir = alan.closest("[data-dynamic-row]");
+      const bas = satir.querySelector('[name="edu_start_year[]"]');
+      const bit = satir.querySelector('[name="edu_end_year[]"]');
+      const ters = bas.value && bit.value && Number(bit.value) < Number(bas.value);
+      uyariGoster(bit, ters ? "Bitiş yılı başlangıç yılından önce olamaz." : "");
+    }
+  });
+}
+
+/* --------------------------------------------------------------------------
+   Canlı profil doluluğu (CV formu)
+
+   Öğrenci yazdıkça doluluk yüzdesi tarayıcıda yeniden hesaplanır. Kural
+   sunucudaki User.profile_completion() ile birebir aynıdır; kayıt sonrası
+   panelde görülen yüzde ile burada görülen tutmalı. Bir satır, sunucunun
+   kaydettiği gibi yalnızca zorunlu alanı doluysa sayılır.
+   -------------------------------------------------------------------------- */
+
+function doluMu(form, ad) {
+  const alan = form.querySelector(`[name="${ad}"]`);
+  return Boolean(alan && alan.value.trim());
+}
+
+function satirVarMi(form, ad) {
+  return Array.from(form.querySelectorAll(`[name="${ad}[]"]`)).some((a) => a.value.trim());
+}
+
+function profilDolulugu(form, transkriptYuklu) {
+  let puan = 0;
+  if (["full_name", "department", "phone", "summary"].every((ad) => doluMu(form, ad))) puan += 25;
+  if (satirVarMi(form, "edu_school")) puan += 25;
+
+  const kaldir = form.querySelector('[name="remove_transcript"]');
+  const yeniDosya = form.querySelector('[name="transcript"]');
+  const transkript = (transkriptYuklu && !(kaldir && kaldir.checked)) ||
+                     Boolean(yeniDosya && yeniDosya.files.length);
+  if (transkript) puan += 20;
+
+  if (satirVarMi(form, "exp_company") || satirVarMi(form, "proj_title")) puan += 15;
+  if (satirVarMi(form, "cert_name")) puan += 15;
+  return Math.min(puan, 100);
+}
+
+function initLiveCompletion() {
+  const gosterge = document.querySelector("[data-live-completion]");
+  const form = gosterge && gosterge.closest("article").querySelector("form");
+  if (!form) return;
+
+  const transkriptYuklu = gosterge.dataset.hasTranscript === "1";
+  const meter = gosterge.querySelector(".meter");
+  const dolgu = gosterge.querySelector(".meter-fill");
+  const deger = gosterge.querySelector("[data-live-value]");
+
+  function guncelle() {
+    const yuzde = profilDolulugu(form, transkriptYuklu);
+    dolgu.style.width = yuzde + "%";
+    deger.textContent = "%" + yuzde;
+    // Renk eşikleri panel ve listelerdekiyle aynı: 85 eksiksiz sayılır
+    meter.classList.toggle("is-high", yuzde >= 85);
+    meter.classList.toggle("is-mid", yuzde >= 50 && yuzde < 85);
+  }
+
+  form.addEventListener("input", guncelle);
+  form.addEventListener("change", guncelle);
+  // Satır silme "input" olayı üretmez; tıklamadan sonra yeniden hesapla
+  form.addEventListener("click", (e) => {
+    if (e.target.closest("[data-row-remove]")) setTimeout(guncelle, 0);
+  });
+  guncelle();
+}
+
+/* --------------------------------------------------------------------------
+   Anlık arama (tablolar)
+
+   data-live-search="tablo-id" olan bir arama kutusu, yazıldıkça o tablonun
+   satırlarını sayfayı yenilemeden süzer. Sunucu tarafı arama (Filtrele
+   butonu) yerinde kalır; JavaScript kapalıysa form eskisi gibi çalışır.
+   -------------------------------------------------------------------------- */
+
+function normalize(metin) {
+  // Türkçe büyük/küçük harf: "İ".toLowerCase() "i̇" verir, tr yereliyle düzelir
+  return metin.toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+function initLiveSearch() {
+  document.querySelectorAll("[data-live-search]").forEach((kutu) => {
+    const tablo = document.getElementById(kutu.dataset.liveSearch);
+    const sayac = document.querySelector("[data-live-count]");
+    if (!tablo) return;
+    const satirlar = Array.from(tablo.tBodies[0].rows);
+
+    kutu.addEventListener("input", () => {
+      const aranan = normalize(kutu.value.trim());
+      let gorunen = 0;
+      satirlar.forEach((satir) => {
+        const eslesti = !aranan || normalize(satir.textContent).includes(aranan);
+        satir.hidden = !eslesti;
+        if (eslesti) gorunen += 1;
+      });
+      if (sayac) sayac.textContent = gorunen;
+    });
+  });
+}
 
 /* Geri alinmasi zahmetli islemler icin onay sorar.
    Formda data-confirm="soru" olmasi yeterli; satir ici JavaScript yok. */
